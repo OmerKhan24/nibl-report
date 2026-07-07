@@ -1,0 +1,76 @@
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.subTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0 12px;
+}
+
+.tooltip {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  font-family: 'Inter', sans-serif;
+}
+
+.tooltipLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tooltipVal {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 2px 0;
+}
+
+.tooltipPct {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.collectionRate {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.crLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.crValue {
+  font-size: 20px;
+  font-weight: 800;
+}
