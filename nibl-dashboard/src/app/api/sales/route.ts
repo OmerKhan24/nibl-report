@@ -31,12 +31,28 @@ export async function GET(req: NextRequest) {
       odooQuery<SaleOrder[]>('sale.order', 'search_read', [draftDomain],     { fields: ['name', 'partner_id', 'amount_total', 'client_order_ref', 'date_order'], limit: 5000 }),
     ]);
 
-    // B2C = has client_order_ref (Shopify order number via TRAX)
-    // B2B = no client_order_ref (direct business customers)
-    const b2cConfirmed = allConfirmed.filter(o => !!o.client_order_ref);
-    const b2bConfirmed = allConfirmed.filter(o => !o.client_order_ref);
-    const b2cDraft     = allDraft.filter(o => !!o.client_order_ref);
-    const b2bDraft     = allDraft.filter(o => !o.client_order_ref);
+    // Helper to classify B2C vs B2B based on partner name and order reference
+    function isB2C(order: SaleOrder): boolean {
+      const partnerName = (order.partner_id ? order.partner_id[1] : '').toLowerCase();
+      
+      // Explicit B2C delivery partners (even if they have no client_order_ref)
+      if (partnerName.includes('trax') || partnerName.includes('payfast') || partnerName.includes('postex') || partnerName.includes('shopify')) {
+        return true;
+      }
+      
+      // Explicit B2B partners (even if they DO have a client_order_ref like a PO number)
+      if (partnerName.includes('pandamart') || partnerName.includes('pharma') || partnerName.includes('mart') || partnerName.includes('store')) {
+        return false;
+      }
+
+      // Default fallback: Shopify orders usually have a client_order_ref
+      return !!order.client_order_ref;
+    }
+
+    const b2cConfirmed = allConfirmed.filter(isB2C);
+    const b2bConfirmed = allConfirmed.filter(o => !isB2C(o));
+    const b2cDraft     = allDraft.filter(isB2C);
+    const b2bDraft     = allDraft.filter(o => !isB2C(o));
 
     const sum = (orders: SaleOrder[]) => orders.reduce((a, o) => a + o.amount_total, 0);
 
