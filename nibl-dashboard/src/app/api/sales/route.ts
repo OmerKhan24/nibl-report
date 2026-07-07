@@ -36,12 +36,12 @@ export async function GET(req: NextRequest) {
       const partnerName = (order.partner_id ? order.partner_id[1] : '').toLowerCase();
       
       // Explicit B2C delivery partners (even if they have no client_order_ref)
-      if (partnerName.includes('trax') || partnerName.includes('payfast') || partnerName.includes('postex') || partnerName.includes('shopify')) {
+      if (partnerName.includes('trax') || partnerName.includes('payfast') || partnerName.includes('pay fast') || partnerName.includes('postex') || partnerName.includes('shopify')) {
         return true;
       }
       
       // Explicit B2B partners (even if they DO have a client_order_ref like a PO number)
-      if (partnerName.includes('pandamart') || partnerName.includes('pharma') || partnerName.includes('mart') || partnerName.includes('store')) {
+      if (partnerName.includes('pandamart') || partnerName.includes('pharma') || partnerName.includes('mart') || partnerName.includes('store') || partnerName.includes('supermarket') || partnerName.includes('esajee')) {
         return false;
       }
 
