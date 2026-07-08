@@ -54,16 +54,18 @@ export async function GET(req: NextRequest) {
     const b2cDraft     = allDraft.filter(isB2C);
     const b2bDraft     = allDraft.filter(o => !isB2C(o));
 
+    const allB2cOrders = [...b2cConfirmed, ...b2cDraft];
+
     const sum = (orders: SaleOrder[]) => orders.reduce((a, o) => a + o.amount_total, 0);
 
-    const b2cRevenue = sum(b2cConfirmed);
+    const b2cRevenue = sum(allB2cOrders);
     const b2bRevenue = sum(b2bConfirmed);
 
     // ── Monthly breakdown ──────────────────────────────────────
     const monthlyMap = new Map<string, MonthlyData>();
     const getMonth = (dateStr: string) => dateStr.substring(0, 7); // YYYY-MM
 
-    for (const o of b2cConfirmed) {
+    for (const o of allB2cOrders) {
       const m = getMonth(o.date_order);
       const entry = monthlyMap.get(m) ?? { month: m, b2cOrders: 0, b2cRevenue: 0, b2bOrders: 0, b2bRevenue: 0 };
       entry.b2cOrders++;
@@ -98,9 +100,9 @@ export async function GET(req: NextRequest) {
 
     const response: SalesApiResponse = {
       b2c: {
-        orders: b2cConfirmed.length,
+        orders: allB2cOrders.length,
         revenue: b2cRevenue,
-        avgOrder: b2cConfirmed.length ? b2cRevenue / b2cConfirmed.length : 0,
+        avgOrder: allB2cOrders.length ? b2cRevenue / allB2cOrders.length : 0,
         drafts: b2cDraft.length,
       },
       b2b: {
@@ -110,11 +112,11 @@ export async function GET(req: NextRequest) {
         drafts: b2bDraft.length,
       },
       total: {
-        orders: allConfirmed.length,
+        orders: allB2cOrders.length + b2bConfirmed.length,
         revenue: b2cRevenue + b2bRevenue,
       },
       monthly,
-      topB2cChannels: topPartners(b2cConfirmed, b2cRevenue),
+      topB2cChannels: topPartners(allB2cOrders, b2cRevenue),
       topB2bCustomers: topPartners(b2bConfirmed, b2bRevenue),
     };
 
