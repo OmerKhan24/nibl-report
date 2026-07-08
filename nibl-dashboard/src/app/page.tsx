@@ -178,16 +178,6 @@ export default function DashboardPage() {
             {/* Channel Cards */}
             <ChannelCards sales={sales} />
 
-            {/* Charts */}
-            <div className={styles.chartsRow}>
-              <div className={styles.chartMain}>
-                <RevenueChart data={sales.monthly} />
-              </div>
-              <div className={styles.chartSide}>
-                <MixDonut sales={sales} invoices={invoices} />
-              </div>
-            </div>
-
             {/* Top Tables */}
             <div className={styles.tablesRow}>
               <TopTable
@@ -206,6 +196,16 @@ export default function DashboardPage() {
                 rows={sales.topB2bCustomers}
                 icon="🏢"
               />
+            </div>
+
+            {/* Charts */}
+            <div className={styles.chartsRow}>
+              <div className={styles.chartMain}>
+                <RevenueChart data={sales.monthly} />
+              </div>
+              <div className={styles.chartSide}>
+                <MixDonut sales={sales} invoices={invoices} />
+              </div>
             </div>
 
             {/* Invoice Status */}

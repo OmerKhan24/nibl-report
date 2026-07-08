@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => a.month.localeCompare(b.month));
 
     // ── Top channels/customers ─────────────────────────────────
-    function topPartners(orders: SaleOrder[], totalRevenue: number, n = 10): PartnerRevenue[] {
+    function topPartners(orders: SaleOrder[], totalRevenue: number, n = 1000): PartnerRevenue[] {
       const map = new Map<string, { orders: number; revenue: number }>();
       for (const o of orders) {
         const name = o.partner_id ? o.partner_id[1] : 'Unknown';

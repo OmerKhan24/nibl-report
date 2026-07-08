@@ -29,7 +29,8 @@ export default function TopTable({ title, subtitle, color, colorLight, rows, ico
         </div>
         <span className={styles.badge}>{rows.length} accounts</span>
       </div>
-      <table className={styles.table}>
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
         <thead>
           <tr>
             <th className={styles.thRank}>#</th>
@@ -68,7 +69,8 @@ export default function TopTable({ title, subtitle, color, colorLight, rows, ico
             </tr>
           )}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }
