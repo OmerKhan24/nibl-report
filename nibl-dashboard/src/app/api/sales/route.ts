@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 
       // B2B field sales orders have client_order_ref starting with "ST Inv", "St Inv", "INV", "S INV" etc.
       // These are physical invoice numbers — NOT Shopify orders.
-      const ref = (order.client_order_ref ?? '').trim().toLowerCase();
+      const ref = (order.client_order_ref || '').trim().toLowerCase();
       if (ref.startsWith('st inv') || ref.startsWith('s inv') || ref.startsWith('inv') || ref.startsWith('st-inv')) {
         return false; // B2B field sale
       }
