@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
-import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue } from '@/lib/types';
+import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, CityRevenue } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +45,14 @@ export async function GET(req: NextRequest) {
         return false;
       }
 
-      // Default fallback: Shopify orders usually have a client_order_ref
+      // B2B field sales orders have client_order_ref starting with "ST Inv", "St Inv", "INV", "S INV" etc.
+      // These are physical invoice numbers — NOT Shopify orders.
+      const ref = (order.client_order_ref ?? '').trim().toLowerCase();
+      if (ref.startsWith('st inv') || ref.startsWith('s inv') || ref.startsWith('inv') || ref.startsWith('st-inv')) {
+        return false; // B2B field sale
+      }
+
+      // Default fallback: if there's a client_order_ref it's likely a Shopify order
       return !!order.client_order_ref;
     }
 
@@ -98,6 +105,57 @@ export async function GET(req: NextRequest) {
         .slice(0, n);
     }
 
+    // ── City breakdown (B2B orders) ────────────────────────────
+    // Step 1: collect unique partner IDs from B2B confirmed orders
+    const b2bPartnerIds = [...new Set(b2bConfirmed.map(o => o.partner_id[0]))];
+
+    // Step 2: fetch city from res.partner for those IDs
+    interface OdooPartner { id: number; name: string; city: string | false; }
+    const partnerRecords = b2bPartnerIds.length > 0
+      ? await odooQuery<OdooPartner[]>(
+          'res.partner', 'search_read',
+          [[['id', 'in', b2bPartnerIds]]],
+          { fields: ['id', 'name', 'city'], limit: 5000 }
+        )
+      : [];
+
+    // Step 3: build a partnerId → city lookup map
+    // If city is blank in Odoo, try to extract an area code from the partner name
+    // e.g. "Bakeman G-10" → "G-10", "D.Watson Haidri Saidpur" → "Saidpur"
+    function inferCity(name: string, odooCity: string | false): string {
+      if (odooCity && odooCity.trim()) return odooCity.trim();
+      // Try to match area codes like G-10, F-7, I-8, DHA, etc.
+      const areaMatch = name.match(/\b([A-Z]-?\d+(?:\/\d+)?|DHA|PWD|Bahria|Gulberg|Johar|Clifton|Defence|Gulshan|Nazimabad|PECHS|North Karachi|Saddar|Korangi|Malir|Orangi|Liaquatabad|Site|Landhi|F\d|G\d|H\d|I\d|E\d|D\d)\b/i);
+      if (areaMatch) return areaMatch[1].toUpperCase();
+      // Last word as fallback (often the area/city)
+      const words = name.trim().split(/\s+/);
+      return words[words.length - 1] || 'Other';
+    }
+
+    const partnerCityMap = new Map<number, string>();
+    for (const p of partnerRecords) {
+      partnerCityMap.set(p.id, inferCity(p.name, p.city));
+    }
+
+    // Step 4: aggregate revenue + orders per city (B2B confirmed only)
+    const cityMap = new Map<string, { orders: number; revenue: number }>();
+    for (const o of b2bConfirmed) {
+      const city = partnerCityMap.get(o.partner_id[0]) ?? 'Other';
+      const entry = cityMap.get(city) ?? { orders: 0, revenue: 0 };
+      entry.orders++;
+      entry.revenue += o.amount_total;
+      cityMap.set(city, entry);
+    }
+
+    const cityBreakdown: CityRevenue[] = Array.from(cityMap.entries())
+      .map(([city, d]) => ({
+        city,
+        orders: d.orders,
+        revenue: d.revenue,
+        share: b2bRevenue ? (d.revenue / b2bRevenue) * 100 : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
     const response: SalesApiResponse = {
       b2c: {
         orders: allB2cOrders.length,
@@ -118,6 +176,7 @@ export async function GET(req: NextRequest) {
       monthly,
       topB2cChannels: topPartners(allB2cOrders, b2cRevenue),
       topB2bCustomers: topPartners(b2bConfirmed, b2bRevenue),
+      cityBreakdown,
     };
 
     return NextResponse.json(response, {

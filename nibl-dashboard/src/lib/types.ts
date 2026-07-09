@@ -39,6 +39,13 @@ export interface PartnerRevenue {
   share: number;
 }
 
+export interface CityRevenue {
+  city: string;
+  orders: number;
+  revenue: number;
+  share: number;
+}
+
 export interface SalesApiResponse {
   b2c: {
     orders: number;
@@ -59,6 +66,7 @@ export interface SalesApiResponse {
   monthly: MonthlyData[];
   topB2cChannels: PartnerRevenue[];
   topB2bCustomers: PartnerRevenue[];
+  cityBreakdown: CityRevenue[];
 }
 
 export interface InvoicesApiResponse {

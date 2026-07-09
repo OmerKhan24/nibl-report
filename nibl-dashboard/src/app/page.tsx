@@ -9,6 +9,7 @@ import MixDonut from '@/components/MixDonut';
 import TopTable from '@/components/TopTable';
 import InvoiceStatus from '@/components/InvoiceStatus';
 import DateFilter from '@/components/DateFilter';
+import CityChart from '@/components/CityChart';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { RefreshCw, TrendingUp, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
@@ -207,6 +208,9 @@ export default function DashboardPage() {
                 <MixDonut sales={sales} invoices={invoices} />
               </div>
             </div>
+
+            {/* City Breakdown */}
+            <CityChart data={sales.cityBreakdown} />
 
             {/* Invoice Status */}
             <InvoiceStatus invoices={invoices} />
