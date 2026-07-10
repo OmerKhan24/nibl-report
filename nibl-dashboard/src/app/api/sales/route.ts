@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     // Fetch all confirmed + draft orders in parallel
     const [allConfirmed, allDraft] = await Promise.all([
       odooQuery<SaleOrder[]>('sale.order', 'search_read', [confirmedDomain], { fields, limit: 5000 }),
-      odooQuery<SaleOrder[]>('sale.order', 'search_read', [draftDomain],     { fields: ['name', 'partner_id', 'amount_total', 'client_order_ref', 'date_order'], limit: 5000 }),
+      odooQuery<SaleOrder[]>('sale.order', 'search_read', [draftDomain],     { fields: ['name', 'partner_id', 'amount_total', 'amount_untaxed', 'client_order_ref', 'date_order'], limit: 5000 }),
     ]);
 
     // Helper to classify B2C vs B2B based on partner name and order reference
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 
     const allB2cOrders = [...b2cConfirmed, ...b2cDraft];
 
-    const sum = (orders: SaleOrder[]) => orders.reduce((a, o) => a + o.amount_total, 0);
+    const sum = (orders: SaleOrder[]) => orders.reduce((a, o) => a + o.amount_untaxed, 0);
 
     const b2cRevenue = sum(allB2cOrders);
     const b2bRevenue = sum(b2bConfirmed);
@@ -76,14 +76,14 @@ export async function GET(req: NextRequest) {
       const m = getMonth(o.date_order);
       const entry = monthlyMap.get(m) ?? { month: m, b2cOrders: 0, b2cRevenue: 0, b2bOrders: 0, b2bRevenue: 0 };
       entry.b2cOrders++;
-      entry.b2cRevenue += o.amount_total;
+      entry.b2cRevenue += o.amount_untaxed;
       monthlyMap.set(m, entry);
     }
     for (const o of b2bConfirmed) {
       const m = getMonth(o.date_order);
       const entry = monthlyMap.get(m) ?? { month: m, b2cOrders: 0, b2cRevenue: 0, b2bOrders: 0, b2bRevenue: 0 };
       entry.b2bOrders++;
-      entry.b2bRevenue += o.amount_total;
+      entry.b2bRevenue += o.amount_untaxed;
       monthlyMap.set(m, entry);
     }
     const monthly = Array.from(monthlyMap.values())
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
         const name = o.partner_id ? o.partner_id[1] : 'Unknown';
         const entry = map.get(name) ?? { orders: 0, revenue: 0 };
         entry.orders++;
-        entry.revenue += o.amount_total;
+        entry.revenue += o.amount_untaxed;
         map.set(name, entry);
       }
       return Array.from(map.entries())
@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
       const city = partnerCityMap.get(o.partner_id[0]) ?? 'Other';
       const entry = cityMap.get(city) ?? { orders: 0, revenue: 0 };
       entry.orders++;
-      entry.revenue += o.amount_total;
+      entry.revenue += o.amount_untaxed;
       cityMap.set(city, entry);
     }
 
