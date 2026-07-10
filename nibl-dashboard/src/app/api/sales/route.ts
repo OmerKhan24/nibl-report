@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
-import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, CityRevenue } from '@/lib/types';
+import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, CityRevenue, DeliveryBreakdown } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,6 +156,29 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
+    // ── Delivery status breakdown ───────────────────────────────
+    // invoice_status: 'invoiced' = Delivered, 'to invoice' = Being Delivered, else = Not Started
+    function buildDeliveryStats(orders: SaleOrder[]) {
+      let delivered = 0, beingDelivered = 0, notStarted = 0;
+      let deliveredRevenue = 0, beingDeliveredRevenue = 0, notStartedRevenue = 0;
+      for (const o of orders) {
+        const s = (o.invoice_status || '') as string;
+        if (s === 'invoiced') {
+          delivered++; deliveredRevenue += o.amount_untaxed;
+        } else if (s === 'to invoice') {
+          beingDelivered++; beingDeliveredRevenue += o.amount_untaxed;
+        } else {
+          notStarted++; notStartedRevenue += o.amount_untaxed;
+        }
+      }
+      return { delivered, beingDelivered, notStarted, deliveredRevenue, beingDeliveredRevenue, notStartedRevenue };
+    }
+
+    const deliveryStatus: DeliveryBreakdown = {
+      b2c: buildDeliveryStats(b2cConfirmed),
+      b2b: buildDeliveryStats(b2bConfirmed),
+    };
+
     const response: SalesApiResponse = {
       b2c: {
         orders: allB2cOrders.length,
@@ -177,6 +200,7 @@ export async function GET(req: NextRequest) {
       topB2cChannels: topPartners(allB2cOrders, b2cRevenue),
       topB2bCustomers: topPartners(b2bConfirmed, b2bRevenue),
       cityBreakdown,
+      deliveryStatus,
     };
 
     return NextResponse.json(response, {

@@ -46,6 +46,20 @@ export interface CityRevenue {
   share: number;
 }
 
+export interface DeliveryStats {
+  delivered: number;        // invoice_status === 'invoiced'
+  beingDelivered: number;   // invoice_status === 'to invoice'
+  notStarted: number;       // invoice_status === 'nothing' or other
+  deliveredRevenue: number;
+  beingDeliveredRevenue: number;
+  notStartedRevenue: number;
+}
+
+export interface DeliveryBreakdown {
+  b2c: DeliveryStats;
+  b2b: DeliveryStats;
+}
+
 export interface SalesApiResponse {
   b2c: {
     orders: number;
@@ -67,6 +81,7 @@ export interface SalesApiResponse {
   topB2cChannels: PartnerRevenue[];
   topB2bCustomers: PartnerRevenue[];
   cityBreakdown: CityRevenue[];
+  deliveryStatus: DeliveryBreakdown;
 }
 
 export interface InvoicesApiResponse {

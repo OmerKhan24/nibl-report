@@ -10,6 +10,7 @@ import TopTable from '@/components/TopTable';
 import InvoiceStatus from '@/components/InvoiceStatus';
 import DateFilter from '@/components/DateFilter';
 import CityChart from '@/components/CityChart';
+import DeliveryChart from '@/components/DeliveryChart';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { RefreshCw, TrendingUp, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
@@ -211,6 +212,9 @@ export default function DashboardPage() {
 
             {/* City Breakdown */}
             <CityChart data={sales.cityBreakdown} />
+
+            {/* Delivery Status */}
+            <DeliveryChart data={sales.deliveryStatus} />
 
             {/* Invoice Status */}
             <InvoiceStatus invoices={invoices} />
