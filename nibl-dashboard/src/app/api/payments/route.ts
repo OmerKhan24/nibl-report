@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get('from');
     const to   = searchParams.get('to');
 
-    const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', '=', 'posted']];
+    const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', 'in', ['posted', 'paid', 'reconciled']]];
     if (from) domain.push(['date', '>=', from]);
     if (to)   domain.push(['date', '<=', to]);
 
@@ -91,7 +91,9 @@ export async function GET(req: NextRequest) {
 
     const total = sources.reduce((acc, s) => acc + s.amount, 0);
 
-    return NextResponse.json({ total, sources } as CashApiResponse);
+    return NextResponse.json({ total, sources } as CashApiResponse, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error: any) {
     console.error('Payments API error:', error);
     return new NextResponse(error.message || 'Internal Server Error', { status: 500 });

@@ -58,10 +58,13 @@ export default function DashboardPage() {
     setError(null);
     try {
       const q = buildQuery(range);
+      const cb = Date.now();
+      const qStr = q ? `${q}&_cb=${cb}` : `?_cb=${cb}`;
+      
       const [salesRes, invRes, cashRes] = await Promise.all([
-        fetch(`/api/sales${q}`),
-        fetch(`/api/invoices${q}`),
-        fetch(`/api/payments${q}`)
+        fetch(`/api/sales${qStr}`),
+        fetch(`/api/invoices${qStr}`),
+        fetch(`/api/payments${qStr}`)
       ]);
       if (!salesRes.ok || !invRes.ok || !cashRes.ok) {
         throw new Error(`API error fetching data`);
