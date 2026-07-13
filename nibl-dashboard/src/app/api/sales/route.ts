@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
+import { fetchShopifyOrders } from '@/lib/shopify';
 import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, CityRevenue, DeliveryBreakdown } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -25,10 +26,11 @@ export async function GET(req: NextRequest) {
       'state', 'date_order', 'client_order_ref', 'invoice_status',
     ];
 
-    // Fetch all confirmed + draft orders in parallel
-    const [allConfirmed, allDraft] = await Promise.all([
+    // Fetch all confirmed + draft orders in parallel (Odoo + Shopify)
+    const [allConfirmed, allDraft, shopifyOrdersRaw] = await Promise.all([
       odooQuery<SaleOrder[]>('sale.order', 'search_read', [confirmedDomain], { fields, limit: 5000 }),
       odooQuery<SaleOrder[]>('sale.order', 'search_read', [draftDomain],     { fields: ['name', 'partner_id', 'amount_total', 'amount_untaxed', 'client_order_ref', 'date_order'], limit: 5000 }),
+      fetchShopifyOrders(from, to)
     ]);
 
     // Helper to classify B2C vs B2B based on partner name and order reference
@@ -56,10 +58,29 @@ export async function GET(req: NextRequest) {
       return !!order.client_order_ref;
     }
 
-    const b2cConfirmed = allConfirmed.filter(isB2C);
+    // We still filter Odoo orders to separate B2B from B2C (to ignore Odoo's B2C copies)
     const b2bConfirmed = allConfirmed.filter(o => !isB2C(o));
-    const b2cDraft     = allDraft.filter(isB2C);
     const b2bDraft     = allDraft.filter(o => !isB2C(o));
+
+    // Map Shopify orders to standard SaleOrder format
+    const shopifyOrders = shopifyOrdersRaw.map((so: any) => {
+      const isDraft = so.financial_status === 'pending' || so.financial_status === 'partially_refunded';
+      const state = so.cancelled_at ? 'cancel' : (isDraft ? 'draft' : 'sale');
+      return {
+        id: so.id,
+        name: so.name,
+        partner_id: [so.customer?.id || 0, so.customer ? `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim() : 'Shopify Customer'],
+        amount_total: parseFloat(so.total_price || '0'),
+        amount_untaxed: parseFloat(so.subtotal_price || '0'),
+        state,
+        date_order: so.created_at ? so.created_at.replace('T', ' ').substring(0, 19) : '',
+        client_order_ref: so.name,
+        invoice_status: so.fulfillment_status === 'fulfilled' ? 'invoiced' : (so.fulfillment_status === 'partial' ? 'to invoice' : 'nothing')
+      } as SaleOrder;
+    }).filter(o => o.state !== 'cancel');
+
+    const b2cConfirmed = shopifyOrders.filter(o => o.state === 'sale');
+    const b2cDraft     = shopifyOrders.filter(o => o.state === 'draft');
 
     const allB2cOrders = [...b2cConfirmed, ...b2cDraft];
 
