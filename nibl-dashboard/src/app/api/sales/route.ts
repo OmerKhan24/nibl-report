@@ -63,21 +63,40 @@ export async function GET(req: NextRequest) {
     const b2bDraft     = allDraft.filter(o => !isB2C(o));
 
     // Map Shopify orders to standard SaleOrder format
-    const shopifyOrders = shopifyOrdersRaw.map((so: any) => {
-      const isDraft = so.financial_status === 'pending' || so.financial_status === 'partially_refunded';
-      const state = so.cancelled_at ? 'cancel' : (isDraft ? 'draft' : 'sale');
+    const shopifyOrders = shopifyOrdersRaw.filter((so: any) => !so.test).map((so: any) => {
+      // Shopify "Total Sales" in the admin dashboard INCLUDES cancelled orders unless they are refunded.
+      // Returns/Refunds are subtracted. We must replicate this exact math to match the admin dashboard.
+      const state = so.financial_status === 'voided' ? 'cancel' : 'sale';
+      
+      const rawTotal = parseFloat(so.total_price || '0');
+      const rawTax = parseFloat(so.total_tax || '0');
+
+      // Calculate actual refunded amount from the refunds array (matches Shopify's "Returns" metric)
+      const refundedAmount = so.refunds?.reduce((acc: number, r: any) => {
+        const txTotal = r.transactions?.reduce((sum: number, tx: any) => {
+          if (tx.status === 'success' && (tx.kind === 'refund' || tx.kind === 'void')) {
+            return sum + parseFloat(tx.amount || '0');
+          }
+          return sum;
+        }, 0) || 0;
+        return acc + txTotal;
+      }, 0) || 0;
+
+      const total = rawTotal - refundedAmount;
+      const tax = rawTax; // assuming refunds don't affect our untaxed math for now, or tax is 0
+
       return {
         id: so.id,
         name: so.name,
         partner_id: [so.customer?.id || 0, so.customer ? `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim() : 'Shopify Customer'],
-        amount_total: parseFloat(so.total_price || '0'),
-        amount_untaxed: parseFloat(so.total_price || '0') - parseFloat(so.total_tax || '0'),
+        amount_total: total,
+        amount_untaxed: total - tax,
         state,
         date_order: so.created_at ? so.created_at.replace('T', ' ').substring(0, 19) : '',
         client_order_ref: so.name,
         invoice_status: so.fulfillment_status === 'fulfilled' ? 'invoiced' : (so.fulfillment_status === 'partial' ? 'to invoice' : 'nothing')
       } as SaleOrder;
-    }).filter(o => o.state !== 'cancel');
+    }).filter(o => o.state !== 'cancel'); // Voided orders are filtered out
 
     const b2cConfirmed = shopifyOrders.filter(o => o.state === 'sale');
     const b2cDraft     = shopifyOrders.filter(o => o.state === 'draft');
