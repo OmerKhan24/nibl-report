@@ -30,7 +30,7 @@ export async function fetchShopifyOrders(from?: string | null, to?: string | nul
 
     // Handle pagination if more than 250 orders
     while (nextUrl) {
-      const response = await fetch(nextUrl, {
+      const response: Response = await fetch(nextUrl, {
         headers: {
           'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
           'Content-Type': 'application/json',
