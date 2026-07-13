@@ -127,8 +127,54 @@
   padding: 14px 40px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--surface2);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.tabBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tabBtn:hover {
+  color: var(--text);
+  background: rgba(0,0,0,0.04);
+}
+
+.tabActive {
+  background: white;
+  color: var(--blue);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tabActive:hover {
+  background: white;
+}
+
+.filterRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .presets {
