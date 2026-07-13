@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         name: so.name,
         partner_id: [so.customer?.id || 0, so.customer ? `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim() : 'Shopify Customer'],
         amount_total: parseFloat(so.total_price || '0'),
-        amount_untaxed: parseFloat(so.subtotal_price || '0'),
+        amount_untaxed: parseFloat(so.total_price || '0') - parseFloat(so.total_tax || '0'),
         state,
         date_order: so.created_at ? so.created_at.replace('T', ' ').substring(0, 19) : '',
         client_order_ref: so.name,

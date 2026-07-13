@@ -17,11 +17,11 @@ export async function fetchShopifyOrders(from?: string | null, to?: string | nul
   url.searchParams.set('limit', '250'); // Max limit per page
 
   if (from) {
-    // Add timezone offset or assume UTC? Assuming UTC for API simplicity
-    url.searchParams.set('created_at_min', `${from}T00:00:00Z`);
+    // Add Pakistan timezone offset so it strictly aligns with your local day
+    url.searchParams.set('created_at_min', `${from}T00:00:00+05:00`);
   }
   if (to) {
-    url.searchParams.set('created_at_max', `${to}T23:59:59Z`);
+    url.searchParams.set('created_at_max', `${to}T23:59:59+05:00`);
   }
 
   try {
@@ -31,6 +31,7 @@ export async function fetchShopifyOrders(from?: string | null, to?: string | nul
     // Handle pagination if more than 250 orders
     while (nextUrl) {
       const response: Response = await fetch(nextUrl, {
+        cache: 'no-store', // CRITICAL: bypass Next.js Data Cache
         headers: {
           'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
           'Content-Type': 'application/json',
