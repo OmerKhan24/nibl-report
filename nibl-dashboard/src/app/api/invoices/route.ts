@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       [dateDomain],
       {
         fields: ['name', 'partner_id', 'amount_total', 'amount_untaxed',
-                 'state', 'invoice_date', 'payment_state', 'invoice_origin'],
+                 'state', 'invoice_date', 'payment_state', 'invoice_origin', 'amount_residual'],
         limit: 5000,
         order: 'invoice_date desc',
       }
@@ -45,6 +45,28 @@ export async function GET(req: NextRequest) {
       ? ((paidAmount + partialAmount * 0.5) / totalAmount) * 100
       : 0;
 
+    // Build Outstanding Customers List
+    const outMap = new Map<number, import('@/lib/types').OutstandingCustomer>();
+    [...notPaidInvs, ...partialInvs].forEach(inv => {
+      if (!inv.partner_id) return;
+      const pid = inv.partner_id[0];
+      const pname = inv.partner_id[1];
+      // Fallback to amount_total if amount_residual is undefined
+      const residual = (inv as any).amount_residual !== undefined ? (inv as any).amount_residual : inv.amount_total;
+      
+      if (!outMap.has(pid)) {
+        outMap.set(pid, { id: pid, name: pname, amountOutstanding: 0, invoiceCount: 0 });
+      }
+      const c = outMap.get(pid)!;
+      c.amountOutstanding += residual;
+      c.invoiceCount++;
+    });
+
+    const outstandingCustomers = Array.from(outMap.values())
+      .filter(c => c.amountOutstanding > 0)
+      .sort((a, b) => b.amountOutstanding - a.amountOutstanding)
+      .slice(0, 50); // top 50 outstanding
+
     const response: InvoicesApiResponse = {
       total,
       totalAmount,
@@ -58,6 +80,7 @@ export async function GET(req: NextRequest) {
       inPaymentAmount,
       outstanding,
       collectionRate,
+      outstandingCustomers,
     };
 
     return NextResponse.json(response, {

@@ -11,6 +11,8 @@ import InvoiceStatus from '@/components/InvoiceStatus';
 import DateFilter from '@/components/DateFilter';
 import CityChart from '@/components/CityChart';
 import DeliveryChart from '@/components/DeliveryChart';
+import CashTab from '@/components/CashTab';
+import { CreditCard, BarChart2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { RefreshCw, TrendingUp, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
@@ -32,11 +34,13 @@ const PRESETS = [
 export default function DashboardPage() {
   const [dateRange, setDateRange]   = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
   const [activePreset, setActivePreset] = useState(3);
-  const [sales, setSales]           = useState<SalesApiResponse | null>(null);
-  const [invoices, setInvoices]     = useState<InvoicesApiResponse | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [activeTab, setActiveTab]       = useState<'sales' | 'cash'>('sales');
+  const [sales, setSales]               = useState<SalesApiResponse | null>(null);
+  const [invoices, setInvoices]         = useState<InvoicesApiResponse | null>(null);
+  const [cash, setCash]                 = useState<any>(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated]   = useState<Date | null>(null);
   const [isOnline, setIsOnline]     = useState(true);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,19 +58,22 @@ export default function DashboardPage() {
     setError(null);
     try {
       const q = buildQuery(range);
-      const [salesRes, invRes] = await Promise.all([
+      const [salesRes, invRes, cashRes] = await Promise.all([
         fetch(`/api/sales${q}`),
         fetch(`/api/invoices${q}`),
+        fetch(`/api/payments${q}`)
       ]);
-      if (!salesRes.ok || !invRes.ok) {
-        const msg = await salesRes.text();
-        throw new Error(`API error: ${msg}`);
+      if (!salesRes.ok || !invRes.ok || !cashRes.ok) {
+        throw new Error(`API error fetching data`);
       }
-      const [salesData, invData] = await Promise.all([salesRes.json(), invRes.json()]);
+      const [salesData, invData, cashData] = await Promise.all([salesRes.json(), invRes.json(), cashRes.json()]);
       if (salesData.error) throw new Error(salesData.error);
       if (invData.error)   throw new Error(invData.error);
+      if (cashData.error)  throw new Error(cashData.error);
+      
       setSales(salesData);
       setInvoices(invData);
+      setCash(cashData);
       setLastUpdated(new Date());
       setIsOnline(true);
     } catch (e) {
@@ -144,18 +151,35 @@ export default function DashboardPage() {
 
       {/* ── Filters ── */}
       <div className={styles.filterBar}>
-        <div className={styles.presets}>
-          {PRESETS.map((p, i) => (
-            <button
-              key={p.label}
-              className={`${styles.presetBtn} ${activePreset === i ? styles.presetActive : ''}`}
-              onClick={() => handlePreset(i)}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className={styles.tabs}>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'sales' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('sales')}
+          >
+            <BarChart2 size={16} /> Sales Overview
+          </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'cash' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('cash')}
+          >
+            <CreditCard size={16} /> Cash & Receivables
+          </button>
         </div>
-        <DateFilter value={dateRange} onChange={handleCustomRange} />
+
+        <div className={styles.filterRight}>
+          <div className={styles.presets}>
+            {PRESETS.map((p, i) => (
+              <button
+                key={p.label}
+                className={`${styles.presetBtn} ${activePreset === i ? styles.presetActive : ''}`}
+                onClick={() => handlePreset(i)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <DateFilter value={dateRange} onChange={handleCustomRange} />
+        </div>
       </div>
 
       {/* ── Error ── */}
@@ -172,52 +196,45 @@ export default function DashboardPage() {
             <div className={styles.loadingSpinner} />
             <p>Loading data from Odoo…</p>
           </div>
-        ) : sales && invoices ? (
+        ) : sales && invoices && cash ? (
           <>
-            {/* KPI Row */}
-            <KpiRow sales={sales} invoices={invoices} />
-
-            {/* Channel Cards */}
-            <ChannelCards sales={sales} />
-
-            {/* Top Tables */}
-            <div className={styles.tablesRow}>
-              <TopTable
-                title="Top B2C Channels"
-                subtitle="Shopify · Delivery Partners"
-                color="var(--b2c)"
-                colorLight="var(--b2c-light)"
-                rows={sales.topB2cChannels}
-                icon="🛒"
-              />
-              <TopTable
-                title="Top B2B Customers"
-                subtitle="Direct · Trade Accounts"
-                color="var(--b2b)"
-                colorLight="var(--b2b-light)"
-                rows={sales.topB2bCustomers}
-                icon="🏢"
-              />
-            </div>
-
-            {/* Charts */}
-            <div className={styles.chartsRow}>
-              <div className={styles.chartMain}>
-                <RevenueChart data={sales.monthly} />
-              </div>
-              <div className={styles.chartSide}>
-                <MixDonut sales={sales} invoices={invoices} />
-              </div>
-            </div>
-
-            {/* City Breakdown */}
-            <CityChart data={sales.cityBreakdown} />
-
-            {/* Delivery Status */}
-            <DeliveryChart data={sales.deliveryStatus} />
-
-            {/* Invoice Status */}
-            <InvoiceStatus invoices={invoices} />
+            {activeTab === 'sales' ? (
+              <>
+                <KpiRow sales={sales} invoices={invoices} />
+                <ChannelCards sales={sales} />
+                <div className={styles.tablesRow}>
+                  <TopTable
+                    title="Top B2C Channels"
+                    subtitle="Shopify · Delivery Partners"
+                    color="var(--b2c)"
+                    colorLight="var(--b2c-light)"
+                    rows={sales.topB2cChannels}
+                    icon="🛒"
+                  />
+                  <TopTable
+                    title="Top B2B Customers"
+                    subtitle="Direct · Trade Accounts"
+                    color="var(--b2b)"
+                    colorLight="var(--b2b-light)"
+                    rows={sales.topB2bCustomers}
+                    icon="🏢"
+                  />
+                </div>
+                <div className={styles.chartsRow}>
+                  <div className={styles.chartMain}>
+                    <RevenueChart data={sales.monthly} />
+                  </div>
+                  <div className={styles.chartSide}>
+                    <MixDonut sales={sales} invoices={invoices} />
+                  </div>
+                </div>
+                <CityChart data={sales.cityBreakdown} />
+                <DeliveryChart data={sales.deliveryStatus} />
+                <InvoiceStatus invoices={invoices} />
+              </>
+            ) : (
+              <CashTab data={{ sales, invoices, cash, generatedAt: new Date().toISOString() }} />
+            )}
           </>
         ) : null}
       </main>

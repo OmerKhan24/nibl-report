@@ -97,10 +97,40 @@ export interface InvoicesApiResponse {
   inPaymentAmount: number;
   outstanding: number;
   collectionRate: number;
+  outstandingCustomers: OutstandingCustomer[];
+}
+
+export interface Payment {
+  id: number;
+  name: string;
+  amount: number;
+  date: string;
+  partner_id: [number, string] | false;
+  journal_id: [number, string];
+  payment_type: string;
+}
+
+export interface CashSource {
+  name: string;
+  amount: number;
+  count: number;
+}
+
+export interface CashApiResponse {
+  total: number;
+  sources: CashSource[];
+}
+
+export interface OutstandingCustomer {
+  id: number;
+  name: string;
+  amountOutstanding: number;
+  invoiceCount: number;
 }
 
 export interface DashboardData {
   sales: SalesApiResponse;
   invoices: InvoicesApiResponse;
+  cash: CashApiResponse;
   generatedAt: string;
 }
