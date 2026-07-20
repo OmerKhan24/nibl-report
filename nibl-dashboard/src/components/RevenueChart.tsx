@@ -2,7 +2,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
+  Tooltip, Legend, ResponsiveContainer, LabelList
 } from 'recharts';
 import type { MonthlyData } from '@/lib/types';
 import styles from './RevenueChart.module.css';
@@ -13,10 +13,8 @@ function formatMonth(m: string) {
   catch { return m; }
 }
 
-function fmtK(v: number) {
-  if (v >= 1_000_000) return `${(v/1_000_000).toFixed(1)}M`;
-  if (v >= 1_000)     return `${(v/1_000).toFixed(0)}K`;
-  return `${v}`;
+function fmtExact(v: number) {
+  return new Intl.NumberFormat('en-PK').format(v);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,7 +52,7 @@ export default function RevenueChart({ data }: { data: MonthlyData[] }) {
         <div className={styles.subtitle}>Confirmed orders only</div>
       </div>
       <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }} barGap={3}>
+        <BarChart data={chartData} margin={{ top: 24, right: 16, left: 16, bottom: 4 }} barGap={3}>
           <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="0" />
           <XAxis
             dataKey="month"
@@ -63,11 +61,11 @@ export default function RevenueChart({ data }: { data: MonthlyData[] }) {
             axisLine={{ stroke: '#e2e8f0' }}
           />
           <YAxis
-            tickFormatter={fmtK}
+            tickFormatter={fmtExact}
             tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
             tickLine={false}
             axisLine={false}
-            width={56}
+            width={70}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(203,213,225,0.3)' }} />
           <Legend
@@ -75,8 +73,12 @@ export default function RevenueChart({ data }: { data: MonthlyData[] }) {
             iconType="circle"
             iconSize={10}
           />
-          <Bar dataKey="B2C (Shopify)" fill="#0ea5e9" radius={[5, 5, 0, 0]} maxBarSize={48} />
-          <Bar dataKey="B2B (Direct)"  fill="#7c3aed" radius={[5, 5, 0, 0]} maxBarSize={48} />
+          <Bar dataKey="B2C (Shopify)" fill="#0ea5e9" radius={[5, 5, 0, 0]} maxBarSize={48}>
+            <LabelList dataKey="B2C (Shopify)" position="top" formatter={fmtExact} style={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} />
+          </Bar>
+          <Bar dataKey="B2B (Direct)"  fill="#7c3aed" radius={[5, 5, 0, 0]} maxBarSize={48}>
+            <LabelList dataKey="B2B (Direct)" position="top" formatter={fmtExact} style={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -4,10 +4,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import type { SalesApiResponse, InvoicesApiResponse } from '@/lib/types';
 import styles from './MixDonut.module.css';
 
-function fmtK(n: number) {
-  if (n >= 1_000_000) return `PKR ${(n/1_000_000).toFixed(2)}M`;
-  if (n >= 1_000)     return `PKR ${(n/1_000).toFixed(0)}K`;
-  return `PKR ${n}`;
+function fmtExact(n: number) {
+  return `PKR ${new Intl.NumberFormat('en-PK').format(n)}`;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,7 +15,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return (
     <div className={styles.tooltip}>
       <div className={styles.tooltipLabel}>{p.name}</div>
-      <div className={styles.tooltipVal}>{fmtK(p.value)}</div>
+      <div className={styles.tooltipVal}>{fmtExact(p.value)}</div>
       <div className={styles.tooltipPct}>{p.payload.pct}% of total</div>
     </div>
   );
