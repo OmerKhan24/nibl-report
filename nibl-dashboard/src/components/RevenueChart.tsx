@@ -13,8 +13,10 @@ function formatMonth(m: string) {
   catch { return m; }
 }
 
-function fmtExact(v: number | string): string {
-  const num = typeof v === 'string' ? parseFloat(v) : v;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fmtExact(v: any): string {
+  if (v == null) return '';
+  const num = typeof v === 'string' ? parseFloat(v) : Number(v);
   if (isNaN(num)) return String(v);
   return new Intl.NumberFormat('en-PK').format(num);
 }
