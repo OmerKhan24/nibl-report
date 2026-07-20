@@ -119,16 +119,25 @@ export async function GET(req: NextRequest) {
 
     // ── Top channels/customers ─────────────────────────────────
     function topPartners(orders: SaleOrder[], totalRevenue: number, n = 1000): PartnerRevenue[] {
-      const map = new Map<string, { orders: number; revenue: number }>();
+      const map = new Map<string, { orders: number; revenue: number; firstOrderDate: string }>();
       for (const o of orders) {
         const name = o.partner_id ? o.partner_id[1] : 'Unknown';
-        const entry = map.get(name) ?? { orders: 0, revenue: 0 };
+        const entry = map.get(name) ?? { orders: 0, revenue: 0, firstOrderDate: o.date_order };
         entry.orders++;
         entry.revenue += o.amount_untaxed;
+        if (o.date_order && (!entry.firstOrderDate || o.date_order < entry.firstOrderDate)) {
+          entry.firstOrderDate = o.date_order;
+        }
         map.set(name, entry);
       }
       return Array.from(map.entries())
-        .map(([name, d]) => ({ name, orders: d.orders, revenue: d.revenue, share: totalRevenue ? d.revenue / totalRevenue * 100 : 0 }))
+        .map(([name, d]) => ({ 
+          name, 
+          orders: d.orders, 
+          revenue: d.revenue, 
+          share: totalRevenue ? d.revenue / totalRevenue * 100 : 0,
+          firstOrderDate: d.firstOrderDate || ''
+        }))
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, n);
     }

@@ -21,6 +21,27 @@
   gap: 12px;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sortSelect {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+.sortSelect:hover {
+  border-color: var(--muted);
+}
+
 .icon { font-size: 22px; }
 
 .title {

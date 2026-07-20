@@ -37,6 +37,7 @@ export interface PartnerRevenue {
   orders: number;
   revenue: number;
   share: number;
+  firstOrderDate: string;
 }
 
 export interface CityRevenue {

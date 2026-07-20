@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { PartnerRevenue } from '@/lib/types';
 import styles from './TopTable.module.css';
 
@@ -15,7 +16,15 @@ interface Props {
 }
 
 export default function TopTable({ title, subtitle, color, colorLight, rows, icon }: Props) {
+  const [sortBy, setSortBy] = useState<'revenue' | 'dateAdded'>('revenue');
+
   const max = rows[0]?.revenue || 1;
+  const sortedRows = [...rows].sort((a, b) => {
+    if (sortBy === 'revenue') return b.revenue - a.revenue;
+    const dateA = a.firstOrderDate ? new Date(a.firstOrderDate).getTime() : 0;
+    const dateB = b.firstOrderDate ? new Date(b.firstOrderDate).getTime() : 0;
+    return dateB - dateA; // Newest first
+  });
 
   return (
     <div className={styles.card} style={{ '--accent': color, '--accent-light': colorLight } as React.CSSProperties}>
@@ -27,7 +36,17 @@ export default function TopTable({ title, subtitle, color, colorLight, rows, ico
             <div className={styles.subtitle}>{subtitle}</div>
           </div>
         </div>
-        <span className={styles.badge}>{rows.length} accounts</span>
+        <div className={styles.headerRight}>
+          <select 
+            className={styles.sortSelect} 
+            value={sortBy} 
+            onChange={e => setSortBy(e.target.value as 'revenue' | 'dateAdded')}
+          >
+            <option value="revenue">Biggest Order to Least</option>
+            <option value="dateAdded">Dates Added</option>
+          </select>
+          <span className={styles.badge}>{rows.length} accounts</span>
+        </div>
       </div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -41,7 +60,7 @@ export default function TopTable({ title, subtitle, color, colorLight, rows, ico
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
+          {sortedRows.map((r, i) => (
             <tr key={r.name} className={styles.row}>
               <td className={styles.rank}>{i + 1}</td>
               <td className={styles.name}>
@@ -63,7 +82,7 @@ export default function TopTable({ title, subtitle, color, colorLight, rows, ico
               </td>
             </tr>
           ))}
-          {rows.length === 0 && (
+          {sortedRows.length === 0 && (
             <tr>
               <td colSpan={5} className={styles.empty}>No data for selected period</td>
             </tr>

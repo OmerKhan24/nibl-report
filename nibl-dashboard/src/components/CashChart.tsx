@@ -37,6 +37,27 @@ export default function CashChart({ sources, total }: Props) {
         <div className={styles.totalLabel}>Total Inbound Cash</div>
       </div>
 
+      <div className={styles.citySummary} style={{ display: 'flex', gap: '16px', margin: '0 24px 20px', padding: '16px', background: 'var(--surface2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <div className={styles.cityBox} style={{ flex: 1 }}>
+          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Karachi Total</div>
+          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+            sources.filter(s => s.name.includes('(KHI)')).reduce((a, b) => a + b.amount, 0)
+          )}</div>
+        </div>
+        <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
+          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Islamabad Total</div>
+          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+            sources.filter(s => s.name.includes('(ISB)')).reduce((a, b) => a + b.amount, 0)
+          )}</div>
+        </div>
+        <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
+          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>B2C Total</div>
+          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+            sources.find(s => s.name.includes('B2C'))?.amount || 0
+          )}</div>
+        </div>
+      </div>
+
       <div className={styles.barWrap}>
         <div className={styles.bar}>
           {sorted.map(s => {
