@@ -69,9 +69,12 @@ export default function DashboardPage() {
         fetch(`/api/payments${qStr}`),
         fetch('/api/inventory')
       ]);
-      if (!salesRes.ok || !invRes.ok || !cashRes.ok || !inventoryRes.ok) {
-        throw new Error(`API error fetching data`);
-      }
+      
+      if (!salesRes.ok) throw new Error(`Sales API Error: ${salesRes.status} ${await salesRes.text()}`);
+      if (!invRes.ok) throw new Error(`Invoices API Error: ${invRes.status} ${await invRes.text()}`);
+      if (!cashRes.ok) throw new Error(`Payments API Error: ${cashRes.status} ${await cashRes.text()}`);
+      if (!inventoryRes.ok) throw new Error(`Inventory API Error: ${inventoryRes.status} ${await inventoryRes.text()}`);
+
       const [salesData, invData, cashData, inventoryJson] = await Promise.all([
         salesRes.json(), invRes.json(), cashRes.json(), inventoryRes.json()
       ]);
