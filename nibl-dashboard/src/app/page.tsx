@@ -63,12 +63,13 @@ export default function DashboardPage() {
       const cb = Date.now();
       const qStr = q ? `${q}&_cb=${cb}` : `?_cb=${cb}`;
       
-      const [salesRes, invRes, cashRes, inventoryRes] = await Promise.all([
+      const [salesRes, invRes, cashRes] = await Promise.all([
         fetch(`/api/sales${qStr}`),
         fetch(`/api/invoices${qStr}`),
-        fetch(`/api/payments${qStr}`),
-        fetch('/api/inventory')
+        fetch(`/api/payments${qStr}`)
       ]);
+      
+      const inventoryRes = await fetch('/api/inventory');
       
       if (!salesRes.ok) throw new Error(`Sales API Error: ${salesRes.status} ${await salesRes.text()}`);
       if (!invRes.ok) throw new Error(`Invoices API Error: ${invRes.status} ${await invRes.text()}`);
