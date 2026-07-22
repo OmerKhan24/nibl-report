@@ -135,3 +135,16 @@ export interface DashboardData {
   cash: CashApiResponse;
   generatedAt: string;
 }
+
+export interface InventoryItem {
+  id: number;
+  name: string;
+  soldLastMonth: number;
+  currentStock: number;
+}
+
+export interface InventoryApiResponse {
+  items: InventoryItem[];
+  prevMonthStart: string;
+  prevMonthEnd: string;
+}

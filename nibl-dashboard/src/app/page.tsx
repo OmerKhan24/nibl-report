@@ -12,7 +12,8 @@ import DateFilter from '@/components/DateFilter';
 import CityChart from '@/components/CityChart';
 import DeliveryChart from '@/components/DeliveryChart';
 import CashTab from '@/components/CashTab';
-import { CreditCard, BarChart2 } from 'lucide-react';
+import InventoryTab from '@/components/InventoryTab';
+import { CreditCard, BarChart2, Package } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { RefreshCw, TrendingUp, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
@@ -34,10 +35,11 @@ const PRESETS = [
 export default function DashboardPage() {
   const [dateRange, setDateRange]   = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
   const [activePreset, setActivePreset] = useState(3);
-  const [activeTab, setActiveTab]       = useState<'sales' | 'cash'>('sales');
+  const [activeTab, setActiveTab]       = useState<'sales' | 'cash' | 'inventory'>('sales');
   const [sales, setSales]               = useState<SalesApiResponse | null>(null);
   const [invoices, setInvoices]         = useState<InvoicesApiResponse | null>(null);
   const [cash, setCash]                 = useState<any>(null);
+  const [inventoryData, setInventoryData] = useState<any>(null);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
   const [lastUpdated, setLastUpdated]   = useState<Date | null>(null);
@@ -61,22 +63,27 @@ export default function DashboardPage() {
       const cb = Date.now();
       const qStr = q ? `${q}&_cb=${cb}` : `?_cb=${cb}`;
       
-      const [salesRes, invRes, cashRes] = await Promise.all([
+      const [salesRes, invRes, cashRes, inventoryRes] = await Promise.all([
         fetch(`/api/sales${qStr}`),
         fetch(`/api/invoices${qStr}`),
-        fetch(`/api/payments${qStr}`)
+        fetch(`/api/payments${qStr}`),
+        fetch('/api/inventory')
       ]);
-      if (!salesRes.ok || !invRes.ok || !cashRes.ok) {
+      if (!salesRes.ok || !invRes.ok || !cashRes.ok || !inventoryRes.ok) {
         throw new Error(`API error fetching data`);
       }
-      const [salesData, invData, cashData] = await Promise.all([salesRes.json(), invRes.json(), cashRes.json()]);
+      const [salesData, invData, cashData, inventoryJson] = await Promise.all([
+        salesRes.json(), invRes.json(), cashRes.json(), inventoryRes.json()
+      ]);
       if (salesData.error) throw new Error(salesData.error);
       if (invData.error)   throw new Error(invData.error);
       if (cashData.error)  throw new Error(cashData.error);
+      if (inventoryJson.error) throw new Error(inventoryJson.error);
       
       setSales(salesData);
       setInvoices(invData);
       setCash(cashData);
+      setInventoryData(inventoryJson);
       setLastUpdated(new Date());
       setIsOnline(true);
     } catch (e) {
@@ -167,6 +174,12 @@ export default function DashboardPage() {
           >
             <CreditCard size={16} /> Cash & Receivables
           </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'inventory' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('inventory')}
+          >
+            <Package size={16} /> Inventory DOH
+          </button>
         </div>
 
         <div className={styles.filterRight}>
@@ -199,7 +212,7 @@ export default function DashboardPage() {
             <div className={styles.loadingSpinner} />
             <p>Loading data from Odoo…</p>
           </div>
-        ) : sales && invoices && cash ? (
+        ) : sales && invoices && cash && inventoryData ? (
           <>
             {activeTab === 'sales' ? (
               <>
@@ -235,8 +248,10 @@ export default function DashboardPage() {
                 <DeliveryChart data={sales.deliveryStatus} />
                 <InvoiceStatus invoices={invoices} />
               </>
-            ) : (
+            ) : activeTab === 'cash' ? (
               <CashTab data={{ sales, invoices, cash, generatedAt: new Date().toISOString() }} />
+            ) : (
+              <InventoryTab data={inventoryData} />
             )}
           </>
         ) : null}
