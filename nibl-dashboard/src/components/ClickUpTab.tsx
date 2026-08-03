@@ -83,6 +83,7 @@ export default function ClickUpTab() {
   const [newTaskPriority, setNewTaskPriority] = useState<string>('3'); // 3 is Normal
   const [newTaskDueDate, setNewTaskDueDate] = useState<string>('');
   const [assignToMe, setAssignToMe] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<string>('active');
 
   // Load token from localStorage on mount
   useEffect(() => {
@@ -362,6 +363,37 @@ export default function ClickUpTab() {
     }
   };
 
+  // Update task status (directly to a specific value)
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['x-clickup-token'] = token;
+
+      const res = await fetch('/api/clickup', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          taskId,
+          status: newStatus,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update task status');
+      }
+
+      // Refresh tasks
+      await loadTasks(selectedListId);
+    } catch (err: any) {
+      setError(err.message || 'Error updating task status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Return loading state during token verify
   if (checkingToken) {
     return (
@@ -419,6 +451,24 @@ export default function ClickUpTab() {
   }
 
   // Active integration view
+  const activeList = lists.find(l => l.id === selectedListId);
+  const availableStatuses = activeList?.statuses || [];
+
+  const filteredTasks = tasks.filter(task => {
+    const isClosed = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete' || task.status.type === 'done';
+    if (statusFilter === 'active') {
+      return !isClosed;
+    }
+    if (statusFilter === 'completed') {
+      return isClosed;
+    }
+    if (statusFilter === 'all') {
+      return true;
+    }
+    // Filter by specific status name
+    return task.status.status === statusFilter;
+  });
+
   return (
     <div className={styles.container}>
       {/* Header Info */}
@@ -522,13 +572,30 @@ export default function ClickUpTab() {
         {/* Left Column: Task list */}
         <div className={styles.panel}>
           <div className={styles.panelTitle}>
-            <ListTodo size={16} /> Active Tasks ({tasks.length})
+            <ListTodo size={16} /> Tasks ({filteredTasks.length})
+            <select
+              className={styles.statusFilterSelect}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{ marginLeft: 'auto' }}
+            >
+              <option value="active">Active Tasks</option>
+              <option value="completed">Completed Tasks</option>
+              <option value="all">All Tasks</option>
+              {availableStatuses.length > 0 && (
+                <optgroup label="Filter by Status">
+                  {availableStatuses.map(s => (
+                    <option key={s.status} value={s.status}>{s.status}</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
             <button 
               className={styles.logoutBtn} 
               onClick={() => loadTasks(selectedListId)}
               disabled={loadingTasks || !selectedListId}
               title="Refresh Task List"
-              style={{ marginLeft: 'auto', color: 'var(--muted)' }}
+              style={{ color: 'var(--muted)' }}
             >
               <RefreshCw size={14} className={loadingTasks ? styles.spin : ''} />
             </button>
@@ -539,17 +606,20 @@ export default function ClickUpTab() {
               <Loader2 className={styles.spinner} size={24} />
               <p>Fetching tasks from ClickUp…</p>
             </div>
-          ) : tasks.length === 0 ? (
+          ) : filteredTasks.length === 0 ? (
             <div className={styles.noTasks}>
               <AlertCircle size={32} />
-              <p>{selectedListId ? 'No tasks in this list' : 'Select a list to view tasks'}</p>
+              <p>{selectedListId ? 'No tasks match the selected filter' : 'Select a list to view tasks'}</p>
             </div>
           ) : (
             <div className={styles.taskList}>
-              {tasks.map(task => {
+              {filteredTasks.map(task => {
                 const isClosed = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete';
                 const hasPriority = task.priority !== null;
                 const priorityClass = hasPriority ? styles[`priority${task.priority?.id}`] : '';
+                
+                const activeList = lists.find(l => l.id === selectedListId);
+                const availableStatuses = activeList?.statuses || [];
                 
                 // Formatted Due Date
                 let isOverdue = false;
@@ -596,12 +666,36 @@ export default function ClickUpTab() {
                       )}
 
                       <div className={styles.taskMeta}>
-                        <span 
+                        <select
                           className={`${styles.badge} ${styles.badgeStatus}`}
-                          style={{ borderColor: task.status.color, color: task.status.color, border: '1px solid' }}
+                          style={{ 
+                            borderColor: task.status.color, 
+                            color: task.status.color, 
+                            border: '1px solid',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            background: 'transparent',
+                            textTransform: 'uppercase',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            borderRadius: '12px',
+                            padding: '2px 24px 2px 8px',
+                            appearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(task.status.color)}' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 8px center',
+                            backgroundSize: '10px'
+                          }}
+                          value={task.status.status}
+                          onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                          disabled={actionLoading}
                         >
-                          {task.status.status}
-                        </span>
+                          {availableStatuses.map(s => (
+                            <option key={s.status} value={s.status} style={{ color: 'var(--text)', background: 'var(--surface)' }}>
+                              {s.status}
+                            </option>
+                          ))}
+                        </select>
 
                         {hasPriority && (
                           <span className={`${styles.badge} ${priorityClass}`}>

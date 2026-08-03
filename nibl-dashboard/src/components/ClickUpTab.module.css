@@ -543,3 +543,19 @@
   font-weight: 500;
   margin-bottom: 16px;
 }
+
+.statusFilterSelect {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-2);
+  outline: none;
+  cursor: pointer;
+}
+
+.statusFilterSelect:focus {
+  border-color: var(--b2b);
+}
