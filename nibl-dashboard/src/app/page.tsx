@@ -13,7 +13,8 @@ import CityChart from '@/components/CityChart';
 import DeliveryChart from '@/components/DeliveryChart';
 import CashTab from '@/components/CashTab';
 import InventoryTab from '@/components/InventoryTab';
-import { CreditCard, BarChart2, Package } from 'lucide-react';
+import ClickUpTab from '@/components/ClickUpTab';
+import { CreditCard, BarChart2, Package, CheckSquare } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { RefreshCw, TrendingUp, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
@@ -35,7 +36,7 @@ const PRESETS = [
 export default function DashboardPage() {
   const [dateRange, setDateRange]   = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
   const [activePreset, setActivePreset] = useState(3);
-  const [activeTab, setActiveTab]       = useState<'sales' | 'cash' | 'inventory'>('sales');
+  const [activeTab, setActiveTab]       = useState<'sales' | 'cash' | 'inventory' | 'clickup'>('sales');
   const [sales, setSales]               = useState<SalesApiResponse | null>(null);
   const [invoices, setInvoices]         = useState<InvoicesApiResponse | null>(null);
   const [cash, setCash]                 = useState<any>(null);
@@ -63,25 +64,25 @@ export default function DashboardPage() {
       const cb = Date.now();
       const qStr = q ? `${q}&_cb=${cb}` : `?_cb=${cb}`;
       
-      const [salesRes, invRes, cashRes] = await Promise.all([
-        fetch(`/api/sales${qStr}`),
-        fetch(`/api/invoices${qStr}`),
-        fetch(`/api/payments${qStr}`)
-      ]);
-      
-      const inventoryRes = await fetch('/api/inventory');
-      
+      // Fetch sequentially to prevent Odoo XML-RPC 503 Rate Limits
+      const salesRes = await fetch(`/api/sales${qStr}`);
       if (!salesRes.ok) throw new Error(`Sales API Error: ${salesRes.status} ${await salesRes.text()}`);
-      if (!invRes.ok) throw new Error(`Invoices API Error: ${invRes.status} ${await invRes.text()}`);
-      if (!cashRes.ok) throw new Error(`Payments API Error: ${cashRes.status} ${await cashRes.text()}`);
-      if (!inventoryRes.ok) throw new Error(`Inventory API Error: ${inventoryRes.status} ${await inventoryRes.text()}`);
-
-      const [salesData, invData, cashData, inventoryJson] = await Promise.all([
-        salesRes.json(), invRes.json(), cashRes.json(), inventoryRes.json()
-      ]);
+      const salesData = await salesRes.json();
       if (salesData.error) throw new Error(salesData.error);
-      if (invData.error)   throw new Error(invData.error);
-      if (cashData.error)  throw new Error(cashData.error);
+
+      const invRes = await fetch(`/api/invoices${qStr}`);
+      if (!invRes.ok) throw new Error(`Invoices API Error: ${invRes.status} ${await invRes.text()}`);
+      const invData = await invRes.json();
+      if (invData.error) throw new Error(invData.error);
+
+      const cashRes = await fetch(`/api/payments${qStr}`);
+      if (!cashRes.ok) throw new Error(`Payments API Error: ${cashRes.status} ${await cashRes.text()}`);
+      const cashData = await cashRes.json();
+      if (cashData.error) throw new Error(cashData.error);
+
+      const inventoryRes = await fetch('/api/inventory');
+      if (!inventoryRes.ok) throw new Error(`Inventory API Error: ${inventoryRes.status} ${await inventoryRes.text()}`);
+      const inventoryJson = await inventoryRes.json();
       if (inventoryJson.error) throw new Error(inventoryJson.error);
       
       setSales(salesData);
@@ -184,6 +185,12 @@ export default function DashboardPage() {
           >
             <Package size={16} /> Inventory DOH
           </button>
+          <button 
+            className={`${styles.tabBtn} ${activeTab === 'clickup' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('clickup')}
+          >
+            <CheckSquare size={16} /> ClickUp Actions
+          </button>
         </div>
 
         <div className={styles.filterRight}>
@@ -211,7 +218,9 @@ export default function DashboardPage() {
 
       {/* ── Content ── */}
       <main className={styles.main}>
-        {loading && !sales ? (
+        {activeTab === 'clickup' ? (
+          <ClickUpTab />
+        ) : loading && !sales ? (
           <div className={styles.loadingState}>
             <div className={styles.loadingSpinner} />
             <p>Loading data from Odoo…</p>

@@ -99,7 +99,8 @@ export default function InventoryTab({ data }: Props) {
             <thead>
               <tr>
                 <th className={styles.thLeft}>Product</th>
-                <th className={styles.thNum}>Units Sold (Last Mo)</th>
+                <th className={styles.thNum}>Units Sold (Prev Mo)</th>
+                <th className={styles.thNum}>Proj. Monthly (+20%)</th>
                 <th className={styles.thNum}>Current Stock</th>
                 <th className={styles.thNum}>Proj. Daily Sales</th>
                 <th className={styles.thNum}>Target Stock (for {targetDoh} days)</th>
@@ -112,6 +113,7 @@ export default function InventoryTab({ data }: Props) {
                 <tr key={row.id} className={styles.row}>
                   <td className={styles.tdLeft}>{row.name}</td>
                   <td className={styles.num}>{Math.round(row.soldLastMonth).toLocaleString()}</td>
+                  <td className={styles.num} style={{ color: 'var(--b2b)', fontWeight: 600 }}>{Math.round(row.projSalesMonth).toLocaleString()}</td>
                   <td className={styles.num}>{Math.round(row.currentStock).toLocaleString()}</td>
                   <td className={styles.num}>{row.projSalesDay.toFixed(1)}</td>
                   <td className={styles.num}>{Math.round(row.requiredStock).toLocaleString()}</td>
