@@ -559,3 +559,39 @@
 .statusFilterSelect:focus {
   border-color: var(--b2b);
 }
+
+.assigneesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+}
+
+.assigneePill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-2);
+}
+
+.assigneePill:hover {
+  border-color: var(--border-strong);
+}
+
+.assigneePillSelected {
+  background: var(--b2b-light);
+  border-color: var(--b2b) !important;
+  color: var(--b2b);
+  font-weight: 600;
+}

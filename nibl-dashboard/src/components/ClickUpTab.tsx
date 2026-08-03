@@ -27,9 +27,20 @@ interface ClickUpUser {
   profilePicture?: string;
 }
 
+interface ClickUpMember {
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    color: string;
+    profile_picture?: string;
+  };
+}
+
 interface Team {
   id: string;
   name: string;
+  members: ClickUpMember[];
 }
 
 interface Space {
@@ -82,7 +93,8 @@ export default function ClickUpTab() {
   const [newTaskDesc, setNewTaskDesc] = useState<string>('');
   const [newTaskPriority, setNewTaskPriority] = useState<string>('3'); // 3 is Normal
   const [newTaskDueDate, setNewTaskDueDate] = useState<string>('');
-  const [assignToMe, setAssignToMe] = useState<boolean>(false);
+  const [selectedAssignees, setSelectedAssignees] = useState<number[]>([]);
+  const [listStatuses, setListStatuses] = useState<{ status: string; type: string; color: string }[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('active');
 
   // Load token from localStorage on mount
@@ -210,6 +222,7 @@ export default function ClickUpTab() {
       if (res.ok) {
         const data = await res.json();
         setTasks(data.tasks || []);
+        setListStatuses(data.statuses || []);
       }
     } catch (err) {
       console.error(err);
@@ -226,6 +239,8 @@ export default function ClickUpTab() {
     setSelectedListId('');
     setLists([]);
     setTasks([]);
+    setListStatuses([]);
+    setSelectedAssignees([]);
     await loadSpaces(teamId);
   };
 
@@ -235,6 +250,8 @@ export default function ClickUpTab() {
     setSelectedListId('');
     setLists([]);
     setTasks([]);
+    setListStatuses([]);
+    setSelectedAssignees([]);
     await loadLists(spaceId);
   };
 
@@ -242,6 +259,8 @@ export default function ClickUpTab() {
   const handleListChange = async (listId: string) => {
     setSelectedListId(listId);
     setTasks([]);
+    setListStatuses([]);
+    setSelectedAssignees([]);
     await loadTasks(listId);
   };
 
@@ -263,6 +282,8 @@ export default function ClickUpTab() {
     setSpaces([]);
     setLists([]);
     setTasks([]);
+    setListStatuses([]);
+    setSelectedAssignees([]);
   };
 
   // Create task
@@ -277,7 +298,7 @@ export default function ClickUpTab() {
       if (token) headers['x-clickup-token'] = token;
 
       const dueDateMs = newTaskDueDate ? new Date(newTaskDueDate).getTime() : undefined;
-      const assignees = assignToMe && user ? [user.id] : [];
+      const assignees = selectedAssignees;
 
       const body = {
         listId: selectedListId,
@@ -303,7 +324,7 @@ export default function ClickUpTab() {
       setNewTaskName('');
       setNewTaskDesc('');
       setNewTaskDueDate('');
-      setAssignToMe(false);
+      setSelectedAssignees([]);
       
       // Reload task list
       await loadTasks(selectedListId);
@@ -316,21 +337,18 @@ export default function ClickUpTab() {
 
   // Update task status (toggle complete)
   const handleToggleComplete = async (task: Task) => {
-    const isCompleted = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete';
-    
-    // Find matching completed/closed status in active list definition, or fallback to 'complete' / 'closed'
-    const activeList = lists.find(l => l.id === selectedListId);
-    const availableStatuses = activeList?.statuses || [];
+    const isCompleted = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete' || task.status.type === 'done';
     
     let targetStatus = '';
     if (isCompleted) {
       // Revert to the first open/active status
-      const openStatus = availableStatuses.find(s => s.type === 'open') || availableStatuses[0];
+      const openStatus = listStatuses.find(s => s.type === 'open') || listStatuses[0];
       targetStatus = openStatus ? openStatus.status : 'to do';
     } else {
       // Mark complete
-      const closedStatus = availableStatuses.find(s => s.type === 'closed') || 
-                           availableStatuses.find(s => s.status.toLowerCase() === 'complete');
+      const closedStatus = listStatuses.find(s => s.type === 'closed') || 
+                           listStatuses.find(s => s.status.toLowerCase() === 'complete') ||
+                           listStatuses.find(s => s.type === 'done');
       targetStatus = closedStatus ? closedStatus.status : 'complete';
     }
 
@@ -451,8 +469,8 @@ export default function ClickUpTab() {
   }
 
   // Active integration view
-  const activeList = lists.find(l => l.id === selectedListId);
-  const availableStatuses = activeList?.statuses || [];
+  const activeTeam = teams.find(t => t.id === selectedTeamId);
+  const teamMembers = activeTeam?.members || [];
 
   const filteredTasks = tasks.filter(task => {
     const isClosed = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete' || task.status.type === 'done';
@@ -582,9 +600,9 @@ export default function ClickUpTab() {
               <option value="active">Active Tasks</option>
               <option value="completed">Completed Tasks</option>
               <option value="all">All Tasks</option>
-              {availableStatuses.length > 0 && (
+              {listStatuses.length > 0 && (
                 <optgroup label="Filter by Status">
-                  {availableStatuses.map(s => (
+                  {listStatuses.map(s => (
                     <option key={s.status} value={s.status}>{s.status}</option>
                   ))}
                 </optgroup>
@@ -690,7 +708,7 @@ export default function ClickUpTab() {
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
                           disabled={actionLoading}
                         >
-                          {availableStatuses.map(s => (
+                          {listStatuses.map(s => (
                             <option key={s.status} value={s.status} style={{ color: 'var(--text)', background: 'var(--surface)' }}>
                               {s.status}
                             </option>
@@ -794,16 +812,58 @@ export default function ClickUpTab() {
               />
             </div>
 
-            <div className={styles.formGroup} style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-              <input
-                id="assignToMe"
-                type="checkbox"
-                checked={assignToMe}
-                onChange={(e) => setAssignToMe(e.target.checked)}
-                disabled={actionLoading || !selectedListId}
-                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-              />
-              <label htmlFor="assignToMe" style={{ cursor: 'pointer', userSelect: 'none' }}>Assign to me</label>
+            <div className={styles.formGroup}>
+              <label>Assignees</label>
+              <div className={styles.assigneesGrid}>
+                {teamMembers.map(m => {
+                  const isSelected = selectedAssignees.includes(m.user.id);
+                  return (
+                    <button
+                      key={m.user.id}
+                      type="button"
+                      className={`${styles.assigneePill} ${isSelected ? styles.assigneePillSelected : ''}`}
+                      onClick={() => {
+                        setSelectedAssignees(prev =>
+                          prev.includes(m.user.id)
+                            ? prev.filter(id => id !== m.user.id)
+                            : [...prev, m.user.id]
+                        );
+                      }}
+                      title={m.user.email}
+                      style={{ borderLeft: `3px solid ${m.user.color || 'var(--border)'}` }}
+                    >
+                      <div 
+                        className={styles.miniAvatar} 
+                        style={{ 
+                          backgroundColor: m.user.color || '#ccc',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: '8px',
+                          fontWeight: 'bold',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {m.user.profile_picture ? (
+                          <img src={m.user.profile_picture} alt={m.user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          m.user.username.substring(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <span style={{ fontSize: '11px' }}>{m.user.username}</span>
+                    </button>
+                  );
+                })}
+                {teamMembers.length === 0 && (
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', fontStyle: 'italic' }}>
+                    No members found in this workspace.
+                  </span>
+                )}
+              </div>
             </div>
 
             <button 

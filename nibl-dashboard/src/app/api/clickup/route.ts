@@ -115,12 +115,22 @@ export async function GET(req: NextRequest) {
       const listId = searchParams.get('listId');
       if (!listId) return NextResponse.json({ error: 'Missing listId' }, { status: 400 });
 
-      const res = await fetch(`${CLICKUP_BASE}/list/${listId}/task?archived=false`, { headers });
-      if (!res.ok) {
-        return NextResponse.json({ error: `ClickUp Error: ${res.statusText}` }, { status: res.status });
+      const [tasksRes, listRes] = await Promise.all([
+        fetch(`${CLICKUP_BASE}/list/${listId}/task?archived=false&include_closed=true`, { headers }),
+        fetch(`${CLICKUP_BASE}/list/${listId}`, { headers })
+      ]);
+
+      if (!tasksRes.ok) {
+        return NextResponse.json({ error: `ClickUp Error: ${tasksRes.statusText}` }, { status: tasksRes.status });
       }
-      const data = await res.json();
-      return NextResponse.json(data);
+
+      const tasksData = await tasksRes.json();
+      const listData = listRes.ok ? await listRes.json() : null;
+
+      return NextResponse.json({
+        tasks: tasksData.tasks || [],
+        statuses: listData?.statuses || []
+      });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
