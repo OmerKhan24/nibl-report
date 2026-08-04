@@ -273,7 +273,7 @@ export default function DashboardPage() {
             ) : activeTab === 'cash' ? (
               <CashTab data={{ sales, invoices, cash, generatedAt: new Date().toISOString() }} dateRange={dateRange} />
             ) : (
-              <InventoryTab data={inventoryData} />
+              <InventoryTab data={inventoryData} sales={sales} />
             )}
           </>
         ) : null}

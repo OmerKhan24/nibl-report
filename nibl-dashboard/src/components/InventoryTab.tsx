@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
-import type { InventoryApiResponse, InventoryItem } from '@/lib/types';
+import { useState, useMemo, useEffect } from 'react';
+import type { InventoryApiResponse, SalesApiResponse, InventoryItem } from '@/lib/types';
 import styles from './InventoryTab.module.css';
 
 interface Props {
   data: InventoryApiResponse;
+  sales: SalesApiResponse;
 }
 
 function getStatus(actual: number, target: number) {
@@ -22,15 +23,37 @@ function getStatus(actual: number, target: number) {
   }
 }
 
-export default function InventoryTab({ data }: Props) {
+export default function InventoryTab({ data, sales }: Props) {
   const [targetDoh, setTargetDoh] = useState<number>(7);
+  const [targetStr, setTargetStr] = useState<string>('');
+
+  useEffect(() => {
+    setTargetStr(localStorage.getItem('nibl_sales_target') || '');
+  }, []);
+
+  const { growthPct, prevRev } = useMemo(() => {
+    const monthlyTarget = parseInt(targetStr, 10) || 0;
+    if (!monthlyTarget) return { growthPct: 0.20, prevRev: 0 };
+
+    const prevMonthStr = data.prevMonthStart.substring(0, 7);
+    const prevMonthData = sales.monthly.find(m => m.month === prevMonthStr);
+    
+    if (!prevMonthData) return { growthPct: 0.20, prevRev: 0 };
+    
+    const prevRev = prevMonthData.b2cRevenue + prevMonthData.b2bRevenue;
+    if (prevRev === 0) return { growthPct: 0.20, prevRev: 0 };
+    
+    const growthPct = (monthlyTarget - prevRev) / prevRev;
+    return { growthPct, prevRev };
+  }, [targetStr, data.prevMonthStart, sales.monthly]);
 
   const tableData = useMemo(() => {
     return data.items.map(item => {
-      const projSalesMonth = item.soldLastMonth * 1.20;
+      const projSalesMonth = item.soldLastMonth * (1 + growthPct);
       const projSalesDay = projSalesMonth / 30;
       const actualDoh = projSalesDay > 0 ? item.currentStock / projSalesDay : item.currentStock > 0 ? 999 : 0;
       const requiredStock = projSalesDay * targetDoh;
+      const requiredProduction = Math.max(0, projSalesMonth + requiredStock - item.currentStock);
       
       return {
         ...item,
@@ -38,10 +61,11 @@ export default function InventoryTab({ data }: Props) {
         projSalesDay,
         actualDoh,
         requiredStock,
+        requiredProduction,
         status: getStatus(actualDoh, targetDoh)
       };
     });
-  }, [data.items, targetDoh]);
+  }, [data.items, targetDoh, growthPct]);
 
   // Overall totals
   const totalStock = tableData.reduce((acc, curr) => acc + curr.currentStock, 0);
@@ -53,9 +77,10 @@ export default function InventoryTab({ data }: Props) {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h2 className={styles.title}>Inventory Days on Hand (DOH)</h2>
+          <h2 className={styles.title}>Production Plan & Inventory DOH</h2>
           <p className={styles.subtitle}>
-            Projected sales based on {data.prevMonthStart} to {data.prevMonthEnd} (+20% growth factor)
+            Projected sales based on {data.prevMonthStart} to {data.prevMonthEnd} 
+            {targetStr ? ` (Target: PKR ${parseInt(targetStr, 10).toLocaleString()} → ${(growthPct * 100).toFixed(1)}% Growth)` : ' (+20% default growth factor)'}
           </p>
         </div>
         <div className={styles.controls}>
@@ -100,8 +125,9 @@ export default function InventoryTab({ data }: Props) {
               <tr>
                 <th className={styles.thLeft}>Product</th>
                 <th className={styles.thNum}>Units Sold (Prev Mo)</th>
-                <th className={styles.thNum}>Proj. Monthly (+20%)</th>
+                <th className={styles.thNum}>Proj. Monthly</th>
                 <th className={styles.thNum}>Current Stock</th>
+                <th className={styles.thNum}>Req. Production</th>
                 <th className={styles.thNum}>Proj. Daily Sales</th>
                 <th className={styles.thNum}>Target Stock (for {targetDoh} days)</th>
                 <th className={styles.thNum}>Actual DOH</th>
@@ -115,6 +141,7 @@ export default function InventoryTab({ data }: Props) {
                   <td className={styles.num}>{Math.round(row.soldLastMonth).toLocaleString()}</td>
                   <td className={styles.num} style={{ color: 'var(--b2b)', fontWeight: 600 }}>{Math.round(row.projSalesMonth).toLocaleString()}</td>
                   <td className={styles.num}>{Math.round(row.currentStock).toLocaleString()}</td>
+                  <td className={styles.num} style={{ color: 'var(--blue)', fontWeight: 700 }}>{Math.round(row.requiredProduction).toLocaleString()}</td>
                   <td className={styles.num}>{row.projSalesDay.toFixed(1)}</td>
                   <td className={styles.num}>{Math.round(row.requiredStock).toLocaleString()}</td>
                   <td className={styles.num}>
