@@ -444,8 +444,8 @@ export default function ClickUpTab() {
   const teamMembers = activeTeam?.members || [];
 
   const filteredTasks = tasks.filter(task => {
-    const isClosed = task.status.type === 'closed' || task.status.type === 'done';
-    const statusName = task.status.status.toLowerCase();
+    const isClosed = task.status?.type === 'closed' || task.status?.type === 'done';
+    const statusName = (task.status?.status || '').toLowerCase();
 
     if (statusFilter === 'active') return !isClosed;
     if (statusFilter === 'completed') return isClosed;
@@ -468,14 +468,14 @@ export default function ClickUpTab() {
           <div className={styles.userProfile}>
             <div className={styles.avatar} style={{ backgroundColor: user.color }}>
               {user.profilePicture ? (
-                <img src={user.profilePicture} alt={user.username} className={styles.avatarImg} />
+                <img src={user.profilePicture} alt={user.username || 'User'} className={styles.avatarImg} />
               ) : (
-                user.username.substring(0, 2).toUpperCase()
+                (user.username || user.email || 'U').substring(0, 2).toUpperCase()
               )}
             </div>
             <div className={styles.userInfo}>
-              <span className={styles.userName}>{user.username}</span>
-              <span className={styles.userEmail}>{user.email}</span>
+              <span className={styles.userName}>{user.username || 'ClickUp User'}</span>
+              <span className={styles.userEmail}>{user.email || 'No email'}</span>
             </div>
             <button className={styles.logoutBtn} onClick={handleLogout} title="Disconnect ClickUp">
               <LogOut size={16} />
@@ -682,9 +682,9 @@ export default function ClickUpTab() {
                               title={a.username}
                             >
                               {a.profilePicture ? (
-                                <img src={a.profilePicture} alt={a.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                                <img src={a.profilePicture} alt={a.username || 'User'} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                               ) : (
-                                a.username.substring(0, 2).toUpperCase()
+                                (a.username || 'U').substring(0, 2).toUpperCase()
                               )}
                             </div>
                           ))}
@@ -801,12 +801,12 @@ export default function ClickUpTab() {
                         }}
                       >
                         {m.user.profile_picture ? (
-                          <img src={m.user.profile_picture} alt={m.user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={m.user.profile_picture} alt={m.user.username || 'User'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          m.user.username.substring(0, 2).toUpperCase()
+                          (m.user.username || 'U').substring(0, 2).toUpperCase()
                         )}
                       </div>
-                      <span style={{ fontSize: '11px' }}>{m.user.username}</span>
+                      <span style={{ fontSize: '11px' }}>{m.user.username || 'User'}</span>
                     </button>
                   );
                 })}
