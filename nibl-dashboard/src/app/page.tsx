@@ -13,6 +13,7 @@ import CityChart from '@/components/CityChart';
 import DeliveryChart from '@/components/DeliveryChart';
 import CashTab from '@/components/CashTab';
 import InventoryTab from '@/components/InventoryTab';
+import TargetCard from '@/components/TargetCard';
 import ClickUpTab from '@/components/ClickUpTab';
 import { CreditCard, BarChart2, Package, CheckSquare } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
@@ -229,7 +230,15 @@ export default function DashboardPage() {
           <>
             {activeTab === 'sales' ? (
               <>
-                <KpiRow sales={sales} invoices={invoices} />
+                <TargetCard 
+                  title="Sales" 
+                  actual={sales.total.revenue} 
+                  dateRange={dateRange} 
+                  storageKey="nibl_sales_target" 
+                />
+                <div style={{ marginTop: '1.5rem' }}>
+                  <KpiRow sales={sales} invoices={invoices} />
+                </div>
                 <ChannelCards sales={sales} />
                 <div className={styles.tablesRow}>
                   <TopTable
@@ -262,7 +271,7 @@ export default function DashboardPage() {
                 <InvoiceStatus invoices={invoices} />
               </>
             ) : activeTab === 'cash' ? (
-              <CashTab data={{ sales, invoices, cash, generatedAt: new Date().toISOString() }} />
+              <CashTab data={{ sales, invoices, cash, generatedAt: new Date().toISOString() }} dateRange={dateRange} />
             ) : (
               <InventoryTab data={inventoryData} />
             )}
