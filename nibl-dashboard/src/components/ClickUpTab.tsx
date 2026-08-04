@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Key, 
-  User, 
   Briefcase, 
   Layers, 
   ListTodo, 
@@ -11,7 +10,6 @@ import {
   LogOut, 
   Calendar, 
   CheckCircle, 
-  Circle, 
   AlertCircle, 
   Loader2, 
   RefreshCw, 
@@ -67,12 +65,10 @@ interface Task {
 }
 
 export default function ClickUpTab() {
-  // Token state
   const [token, setToken] = useState<string>('');
   const [tokenVerified, setTokenVerified] = useState<boolean>(false);
   const [checkingToken, setCheckingToken] = useState<boolean>(true);
 
-  // Meta states
   const [user, setUser] = useState<ClickUpUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -81,53 +77,41 @@ export default function ClickUpTab() {
   const [lists, setLists] = useState<List[]>([]);
   const [selectedListId, setSelectedListId] = useState<string>('');
 
-  // Task list and interaction states
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(false);
   const [loadingMeta, setLoadingMeta] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form states
   const [newTaskName, setNewTaskName] = useState<string>('');
   const [newTaskDesc, setNewTaskDesc] = useState<string>('');
-  const [newTaskPriority, setNewTaskPriority] = useState<string>('3'); // 3 is Normal
+  const [newTaskPriority, setNewTaskPriority] = useState<string>('3');
   const [newTaskDueDate, setNewTaskDueDate] = useState<string>('');
   const [selectedAssignees, setSelectedAssignees] = useState<number[]>([]);
   const [listStatuses, setListStatuses] = useState<{ status: string; type: string; color: string }[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('active');
 
-  // Load token from localStorage on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('clickup_api_token') || '';
     setToken(savedToken);
     verifyAndInit(savedToken);
   }, []);
 
-  // Main verify and initialize call
   const verifyAndInit = async (tokenToVerify: string) => {
     setCheckingToken(true);
     setError(null);
     try {
       const headers: Record<string, string> = {};
-      if (tokenToVerify) {
-        headers['x-clickup-token'] = tokenToVerify;
-      }
+      if (tokenToVerify) headers['x-clickup-token'] = tokenToVerify;
 
-      // 1. Try to get user
       const userRes = await fetch('/api/clickup?action=user', { headers });
-      if (!userRes.ok) {
-        throw new Error('Failed to authorize with ClickUp API token.');
-      }
-
+      if (!userRes.ok) throw new Error('Failed to authorize with ClickUp API token.');
+      
       const userData = await userRes.json();
       setUser(userData.user);
       setTokenVerified(true);
-      if (tokenToVerify) {
-        localStorage.setItem('clickup_api_token', tokenToVerify);
-      }
+      if (tokenToVerify) localStorage.setItem('clickup_api_token', tokenToVerify);
 
-      // 2. Fetch Teams
       setLoadingMeta(true);
       const teamsRes = await fetch('/api/clickup?action=teams', { headers });
       if (teamsRes.ok) {
@@ -142,17 +126,13 @@ export default function ClickUpTab() {
     } catch (err: any) {
       console.error(err);
       setTokenVerified(false);
-      // Don't show global error if it's just that they need to enter a token
-      if (tokenToVerify) {
-        setError('Invalid token or connection issues. Please try again.');
-      }
+      if (tokenToVerify) setError('Invalid token or connection issues. Please try again.');
     } finally {
       setCheckingToken(false);
       setLoadingMeta(false);
     }
   };
 
-  // Load spaces
   const loadSpaces = async (teamId: string, currentToken = token) => {
     if (!teamId) return;
     setLoadingMeta(true);
@@ -182,7 +162,6 @@ export default function ClickUpTab() {
     }
   };
 
-  // Load lists
   const loadLists = async (spaceId: string, currentToken = token) => {
     if (!spaceId) return;
     setLoadingMeta(true);
@@ -197,7 +176,7 @@ export default function ClickUpTab() {
         if (data.lists && data.lists.length > 0) {
           const defaultListId = data.lists[0].id;
           setSelectedListId(defaultListId);
-          await loadTasks(defaultListId, currentToken);
+          await loadTasks(defaultListId, currentToken, data.lists);
         } else {
           setSelectedListId('');
           setTasks([]);
@@ -210,8 +189,7 @@ export default function ClickUpTab() {
     }
   };
 
-  // Load tasks
-  const loadTasks = async (listId: string, currentToken = token) => {
+  const loadTasks = async (listId: string, currentToken = token, optionalLists = lists) => {
     if (!listId) return;
     setLoadingTasks(true);
     try {
@@ -222,7 +200,14 @@ export default function ClickUpTab() {
       if (res.ok) {
         const data = await res.json();
         setTasks(data.tasks || []);
-        setListStatuses(data.statuses || []);
+        
+        // Use statuses from the list directly
+        const activeList = optionalLists.find(l => l.id === listId);
+        if (activeList?.statuses?.length) {
+          setListStatuses(activeList.statuses);
+        } else {
+          setListStatuses(data.statuses || []);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -231,7 +216,6 @@ export default function ClickUpTab() {
     }
   };
 
-  // Handle workspace dropdown change
   const handleTeamChange = async (teamId: string) => {
     setSelectedTeamId(teamId);
     setSelectedSpaceId('');
@@ -244,7 +228,6 @@ export default function ClickUpTab() {
     await loadSpaces(teamId);
   };
 
-  // Handle space dropdown change
   const handleSpaceChange = async (spaceId: string) => {
     setSelectedSpaceId(spaceId);
     setSelectedListId('');
@@ -255,24 +238,18 @@ export default function ClickUpTab() {
     await loadLists(spaceId);
   };
 
-  // Handle list dropdown change
   const handleListChange = async (listId: string) => {
     setSelectedListId(listId);
     setTasks([]);
-    setListStatuses([]);
     setSelectedAssignees([]);
     await loadTasks(listId);
   };
 
-  // Handle custom token submit
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (token.trim()) {
-      verifyAndInit(token.trim());
-    }
+    if (token.trim()) verifyAndInit(token.trim());
   };
 
-  // Handle logout / clear token
   const handleLogout = () => {
     localStorage.removeItem('clickup_api_token');
     setToken('');
@@ -286,7 +263,6 @@ export default function ClickUpTab() {
     setSelectedAssignees([]);
   };
 
-  // Create task
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskName.trim() || !selectedListId) return;
@@ -320,13 +296,11 @@ export default function ClickUpTab() {
         throw new Error(errData.error || 'Failed to create task');
       }
 
-      // Success
       setNewTaskName('');
       setNewTaskDesc('');
       setNewTaskDueDate('');
       setSelectedAssignees([]);
       
-      // Reload task list
       await loadTasks(selectedListId);
     } catch (err: any) {
       setError(err.message || 'Error creating task');
@@ -335,53 +309,29 @@ export default function ClickUpTab() {
     }
   };
 
-  // Update task status (toggle complete)
   const handleToggleComplete = async (task: Task) => {
-    const isCompleted = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete' || task.status.type === 'done';
+    const isCompleted = task.status.type === 'closed' || task.status.type === 'done';
     
     let targetStatus = '';
     if (isCompleted) {
-      // Revert to the first open/active status
       const openStatus = listStatuses.find(s => s.type === 'open') || listStatuses[0];
-      targetStatus = openStatus ? openStatus.status : 'to do';
-    } else {
-      // Mark complete
-      const closedStatus = listStatuses.find(s => s.type === 'closed') || 
-                           listStatuses.find(s => s.status.toLowerCase() === 'complete') ||
-                           listStatuses.find(s => s.type === 'done');
-      targetStatus = closedStatus ? closedStatus.status : 'complete';
-    }
-
-    setActionLoading(true);
-    setError(null);
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['x-clickup-token'] = token;
-
-      const res = await fetch('/api/clickup', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({
-          taskId: task.id,
-          status: targetStatus,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to update task status');
+      if (!openStatus) {
+        setError('No open status found for this list.');
+        return;
       }
-
-      // Refresh tasks
-      await loadTasks(selectedListId);
-    } catch (err: any) {
-      setError(err.message || 'Error updating task status');
-    } finally {
-      setActionLoading(false);
+      targetStatus = openStatus.status;
+    } else {
+      const closedStatus = listStatuses.find(s => s.type === 'closed') || listStatuses.find(s => s.type === 'done');
+      if (!closedStatus) {
+        setError('No closed status found for this list.');
+        return;
+      }
+      targetStatus = closedStatus.status;
     }
+
+    await handleStatusChange(task.id, targetStatus);
   };
 
-  // Update task status (directly to a specific value)
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     setActionLoading(true);
     setError(null);
@@ -403,7 +353,6 @@ export default function ClickUpTab() {
         throw new Error(errData.error || 'Failed to update task status');
       }
 
-      // Refresh tasks
       await loadTasks(selectedListId);
     } catch (err: any) {
       setError(err.message || 'Error updating task status');
@@ -412,7 +361,35 @@ export default function ClickUpTab() {
     }
   };
 
-  // Return loading state during token verify
+  const handleAssignTask = async (taskId: string, memberId: number) => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['x-clickup-token'] = token;
+
+      const res = await fetch('/api/clickup', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          taskId,
+          assignees: [memberId],
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to assign task');
+      }
+
+      await loadTasks(selectedListId);
+    } catch (err: any) {
+      setError(err.message || 'Error assigning task');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (checkingToken) {
     return (
       <div className={styles.loadingWrapper}>
@@ -422,7 +399,6 @@ export default function ClickUpTab() {
     );
   }
 
-  // Return Token Setup screen if not authorized
   if (!tokenVerified) {
     return (
       <div className={styles.tokenSetup}>
@@ -430,9 +406,7 @@ export default function ClickUpTab() {
           <Key size={28} />
         </div>
         <h3>Connect ClickUp</h3>
-        <p>
-          Integrate ClickUp tasks into your NIBL dashboard. Enter your Personal API Token to authorize access.
-        </p>
+        <p>Integrate ClickUp tasks into your NIBL dashboard. Enter your Personal API Token to authorize access.</p>
 
         {error && <div className={styles.errorBanner}>{error}</div>}
 
@@ -449,9 +423,7 @@ export default function ClickUpTab() {
               required
             />
           </div>
-          <button type="submit" className={styles.saveBtn}>
-            Save and Connect
-          </button>
+          <button type="submit" className={styles.saveBtn}>Save and Connect</button>
         </form>
 
         <div className={styles.instructions}>
@@ -468,28 +440,24 @@ export default function ClickUpTab() {
     );
   }
 
-  // Active integration view
   const activeTeam = teams.find(t => t.id === selectedTeamId);
   const teamMembers = activeTeam?.members || [];
 
   const filteredTasks = tasks.filter(task => {
-    const isClosed = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete' || task.status.type === 'done';
-    if (statusFilter === 'active') {
-      return !isClosed;
-    }
-    if (statusFilter === 'completed') {
-      return isClosed;
-    }
-    if (statusFilter === 'all') {
-      return true;
-    }
-    // Filter by specific status name
+    const isClosed = task.status.type === 'closed' || task.status.type === 'done';
+    const statusName = task.status.status.toLowerCase();
+
+    if (statusFilter === 'active') return !isClosed;
+    if (statusFilter === 'completed') return isClosed;
+    if (statusFilter === 'planning') return statusName.includes('plan') || statusName.includes('backlog');
+    if (statusFilter === 'in_progress') return statusName.includes('progress') || statusName.includes('doing');
+    if (statusFilter === 'all') return true;
+    
     return task.status.status === statusFilter;
   });
 
   return (
     <div className={styles.container}>
-      {/* Header Info */}
       <div className={styles.header}>
         <div className={styles.titleArea}>
           <h2 className={styles.title}>ClickUp Task Center</h2>
@@ -498,10 +466,7 @@ export default function ClickUpTab() {
 
         {user && (
           <div className={styles.userProfile}>
-            <div 
-              className={styles.avatar}
-              style={{ backgroundColor: user.color }}
-            >
+            <div className={styles.avatar} style={{ backgroundColor: user.color }}>
               {user.profilePicture ? (
                 <img src={user.profilePicture} alt={user.username} className={styles.avatarImg} />
               ) : (
@@ -521,9 +486,7 @@ export default function ClickUpTab() {
 
       {error && <div className={styles.errorBanner}>{error}</div>}
 
-      {/* Nav Dropdowns */}
       <div className={styles.filterRow}>
-        {/* Workspace select */}
         <div className={styles.selectGroup}>
           <label className={styles.selectLabel}>
             <Briefcase size={11} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Workspace
@@ -540,7 +503,6 @@ export default function ClickUpTab() {
           </select>
         </div>
 
-        {/* Space select */}
         <div className={styles.selectGroup}>
           <label className={styles.selectLabel}>
             <Layers size={11} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Space
@@ -561,7 +523,6 @@ export default function ClickUpTab() {
           </select>
         </div>
 
-        {/* List select */}
         <div className={styles.selectGroup}>
           <label className={styles.selectLabel}>
             <ListTodo size={11} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> List
@@ -585,9 +546,7 @@ export default function ClickUpTab() {
         </div>
       </div>
 
-      {/* Main Split Layout */}
       <div className={styles.layout}>
-        {/* Left Column: Task list */}
         <div className={styles.panel}>
           <div className={styles.panelTitle}>
             <ListTodo size={16} /> Tasks ({filteredTasks.length})
@@ -598,6 +557,8 @@ export default function ClickUpTab() {
               style={{ marginLeft: 'auto' }}
             >
               <option value="active">Active Tasks</option>
+              <option value="in_progress">In Progress Tasks</option>
+              <option value="planning">Planning Tasks</option>
               <option value="completed">Completed Tasks</option>
               <option value="all">All Tasks</option>
               {listStatuses.length > 0 && (
@@ -632,27 +593,20 @@ export default function ClickUpTab() {
           ) : (
             <div className={styles.taskList}>
               {filteredTasks.map(task => {
-                const isClosed = task.status.type === 'closed' || task.status.status.toLowerCase() === 'complete';
+                const isClosed = task.status.type === 'closed' || task.status.type === 'done';
                 const hasPriority = task.priority !== null;
-                const priorityClass = hasPriority ? styles[`priority${task.priority?.id}`] : '';
+                const priorityClass = hasPriority ? (styles as any)[`priority${task.priority?.id}`] : '';
                 
-                const activeList = lists.find(l => l.id === selectedListId);
-                const availableStatuses = activeList?.statuses || [];
-                
-                // Formatted Due Date
                 let isOverdue = false;
                 let formattedDate = '';
                 if (task.due_date) {
                   const date = new Date(parseInt(task.due_date));
                   formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                  if (date < new Date() && !isClosed) {
-                    isOverdue = true;
-                  }
+                  if (date < new Date() && !isClosed) isOverdue = true;
                 }
 
                 return (
                   <div key={task.id} className={`${styles.taskCard} ${isClosed ? styles.taskCompleted : ''}`}>
-                    {/* Completion button */}
                     <button 
                       className={styles.taskCheckbox} 
                       onClick={() => handleToggleComplete(task)}
@@ -661,7 +615,6 @@ export default function ClickUpTab() {
                       <CheckCircle size={16} />
                     </button>
 
-                    {/* Content */}
                     <div className={styles.taskContent}>
                       <div className={styles.taskHeader}>
                         <h4 className={styles.taskName}>{task.name}</h4>
@@ -694,15 +647,7 @@ export default function ClickUpTab() {
                             outline: 'none',
                             background: 'transparent',
                             textTransform: 'uppercase',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            borderRadius: '12px',
-                            padding: '2px 24px 2px 8px',
-                            appearance: 'none',
-                            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(task.status.color)}' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'right 8px center',
-                            backgroundSize: '10px'
+                            fontSize: '11px'
                           }}
                           value={task.status.status}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
@@ -728,24 +673,39 @@ export default function ClickUpTab() {
                           </span>
                         )}
 
-                        {task.assignees.length > 0 && (
-                          <div className={styles.assigneesList}>
-                            {task.assignees.map(a => (
-                              <div 
-                                key={a.id} 
-                                className={styles.miniAvatar}
-                                style={{ backgroundColor: a.color }}
-                                title={a.username}
-                              >
-                                {a.profilePicture ? (
-                                  <img src={a.profilePicture} alt={a.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
-                                ) : (
-                                  a.username.substring(0, 2).toUpperCase()
-                                )}
-                              </div>
+                        <div className={styles.assigneesList}>
+                          {task.assignees.map(a => (
+                            <div 
+                              key={a.id} 
+                              className={styles.miniAvatar}
+                              style={{ backgroundColor: a.color || '#ccc' }}
+                              title={a.username}
+                            >
+                              {a.profilePicture ? (
+                                <img src={a.profilePicture} alt={a.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                              ) : (
+                                a.username.substring(0, 2).toUpperCase()
+                              )}
+                            </div>
+                          ))}
+                          <select 
+                            className={styles.formSelect} 
+                            style={{ padding: '0px', height: '1.5rem', marginLeft: '4px', fontSize: '10px' }}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleAssignTask(task.id, parseInt(e.target.value));
+                                e.target.value = '';
+                              }
+                            }}
+                            disabled={actionLoading}
+                            value=""
+                          >
+                            <option value="">+ Assign</option>
+                            {teamMembers.map(m => (
+                              <option key={m.user?.id} value={m.user?.id}>{m.user?.username}</option>
                             ))}
-                          </div>
-                        )}
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -755,7 +715,6 @@ export default function ClickUpTab() {
           )}
         </div>
 
-        {/* Right Column: Create task form */}
         <div className={styles.panel}>
           <div className={styles.panelTitle}>
             <PlusCircle size={16} /> New Task
@@ -816,6 +775,7 @@ export default function ClickUpTab() {
               <label>Assignees</label>
               <div className={styles.assigneesGrid}>
                 {teamMembers.map(m => {
+                  if (!m.user) return null;
                   const isSelected = selectedAssignees.includes(m.user.id);
                   return (
                     <button
@@ -836,16 +796,8 @@ export default function ClickUpTab() {
                         className={styles.miniAvatar} 
                         style={{ 
                           backgroundColor: m.user.color || '#ccc',
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#fff',
-                          fontSize: '8px',
-                          fontWeight: 'bold',
-                          overflow: 'hidden'
+                          border: 'none',
+                          margin: 0
                         }}
                       >
                         {m.user.profile_picture ? (

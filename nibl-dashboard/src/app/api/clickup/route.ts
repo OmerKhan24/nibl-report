@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
             const fRes = await fetch(`${CLICKUP_BASE}/folder/${folder.id}/list`, { headers });
             if (fRes.ok) {
               const fData = await fRes.json();
-              return (fData.lists || []).map((l: any) => ({
+              return (fData?.lists || []).map((l: any) => ({
                 id: l.id,
                 name: l.name,
                 folderName: folder.name,
@@ -194,7 +194,12 @@ export async function PUT(req: NextRequest) {
     if (name !== undefined) payload.name = name;
     if (description !== undefined) payload.description = description;
     if (dueDate !== undefined) payload.due_date = dueDate;
-    if (assignees !== undefined && Array.isArray(assignees)) payload.assignees = assignees;
+    if (assignees !== undefined && Array.isArray(assignees)) {
+      payload.assignees = {
+        add: assignees,
+        rem: [] 
+      };
+    }
 
     const res = await fetch(`${CLICKUP_BASE}/task/${taskId}`, {
       method: 'PUT',
