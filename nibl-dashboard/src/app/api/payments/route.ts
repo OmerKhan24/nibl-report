@@ -37,18 +37,30 @@ export async function GET(req: NextRequest) {
       if (nameUpper.includes('ISB') || nameUpper.includes('ISLAMABAD') || nameUpper.includes('ISL') || nameUpper.includes('G-10') || nameUpper.includes('F-7') || nameUpper.includes('BLUE AREA') || nameUpper.includes('JINNAH SUPER') || nameUpper.includes('F-11') || nameUpper.includes('G-9')) {
         return 'Islamabad';
       }
+      if (nameUpper.includes('LHE') || nameUpper.includes('LAHORE') || nameUpper.includes('GULBERG') || nameUpper.includes('JOHAR TOWN') || nameUpper.includes('MODEL TOWN') || nameUpper.includes('DEFENCE LHE')) {
+        return 'Lahore';
+      }
       
       return 'Other'; // Fallback
     }
 
     let b2cTotal = 0;
     let b2cCount = 0;
+    
     let faysalKhi = 0, faysalKhiCount = 0;
     let faysalIsb = 0, faysalIsbCount = 0;
+    let faysalLhe = 0, faysalLheCount = 0;
+    let faysalOther = 0, faysalOtherCount = 0;
+
     let dubaiKhi = 0, dubaiKhiCount = 0;
     let dubaiIsb = 0, dubaiIsbCount = 0;
+    let dubaiLhe = 0, dubaiLheCount = 0;
+    let dubaiOther = 0, dubaiOtherCount = 0;
+
     let cashKhi = 0, cashKhiCount = 0;
     let cashIsb = 0, cashIsbCount = 0;
+    let cashLhe = 0, cashLheCount = 0;
+    let cashOther = 0, cashOtherCount = 0;
 
     for (const p of payments) {
       if (!p.journal_id) continue;
@@ -65,11 +77,15 @@ export async function GET(req: NextRequest) {
 
       if (jId === 19) { // Faysal Bank
         if (city === 'Islamabad') { faysalIsb += amt; faysalIsbCount++; }
-        else { faysalKhi += amt; faysalKhiCount++; }
+        else if (city === 'Lahore') { faysalLhe += amt; faysalLheCount++; }
+        else if (city === 'Karachi') { faysalKhi += amt; faysalKhiCount++; }
+        else { faysalOther += amt; faysalOtherCount++; }
       } 
       else if (jId === 16) { // Dubai Islamic
         if (city === 'Islamabad') { dubaiIsb += amt; dubaiIsbCount++; }
-        else { dubaiKhi += amt; dubaiKhiCount++; }
+        else if (city === 'Lahore') { dubaiLhe += amt; dubaiLheCount++; }
+        else if (city === 'Karachi') { dubaiKhi += amt; dubaiKhiCount++; }
+        else { dubaiOther += amt; dubaiOtherCount++; }
       }
       else if (jId === 17) { // KHI Cash
         cashKhi += amt; cashKhiCount++;
@@ -77,16 +93,29 @@ export async function GET(req: NextRequest) {
       else if (jId === 18) { // ISB Cash
         cashIsb += amt; cashIsbCount++;
       }
+      else if (p.payment_type === 'inbound') {
+        // Fallback for any other cash/bank journals
+        if (city === 'Lahore') { cashLhe += amt; cashLheCount++; }
+        else if (city === 'Islamabad') { cashIsb += amt; cashIsbCount++; }
+        else if (city === 'Karachi') { cashKhi += amt; cashKhiCount++; }
+        else { cashOther += amt; cashOtherCount++; }
+      }
     }
 
     const sources: CashSource[] = [
       { name: 'B2C (Shopify/Trax/Postex)', amount: b2cTotal, count: b2cCount },
       { name: 'Faysal Bank (KHI)', amount: faysalKhi, count: faysalKhiCount },
       { name: 'Faysal Bank (ISB)', amount: faysalIsb, count: faysalIsbCount },
+      { name: 'Faysal Bank (LHE)', amount: faysalLhe, count: faysalLheCount },
+      { name: 'Faysal Bank (Other)', amount: faysalOther, count: faysalOtherCount },
       { name: 'Dubai Islamic (KHI)', amount: dubaiKhi, count: dubaiKhiCount },
       { name: 'Dubai Islamic (ISB)', amount: dubaiIsb, count: dubaiIsbCount },
+      { name: 'Dubai Islamic (LHE)', amount: dubaiLhe, count: dubaiLheCount },
+      { name: 'Dubai Islamic (Other)', amount: dubaiOther, count: dubaiOtherCount },
       { name: 'Cash in Hand (KHI)', amount: cashKhi, count: cashKhiCount },
       { name: 'Cash in Hand (ISB)', amount: cashIsb, count: cashIsbCount },
+      { name: 'Cash in Hand (LHE)', amount: cashLhe, count: cashLheCount },
+      { name: 'Other Channels', amount: cashOther, count: cashOtherCount },
     ];
 
     const total = sources.reduce((acc, s) => acc + s.amount, 0);
