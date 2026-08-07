@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const payments = await odooQuery<Payment[]>('account.payment', 'search_read', [domain], { fields, limit: 5000 });
 
     // Step 1: Collect unique partner IDs
-    const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => p.partner_id[0]))];
+    const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => (p.partner_id as [number, string])[0]))];
 
     // Step 2: Fetch city from res.partner
     interface OdooPartner { id: number; name: string; city: string | false; }
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     function getCityCategory(payment: Payment): string {
       const partnerName = payment.partner_id ? payment.partner_id[1] : '';
-      const partnerId = payment.partner_id ? payment.partner_id[0] : 0;
+      const partnerId = payment.partner_id ? (payment.partner_id as [number, string])[0] : 0;
       const odooCity = partnerCityMap.get(partnerId) || '';
       
       const combinedStr = `${partnerName} ${odooCity}`.toUpperCase();
