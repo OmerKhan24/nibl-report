@@ -59,38 +59,6 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
         accent="var(--b2b)"
         accentLight="var(--b2b-light)"
       />
-      <KpiCard
-        label="Total Invoiced"
-        value={`PKR ${fmt(invoices.totalAmount)}`}
-        sub={`${invoices.total} posted invoices`}
-        icon={<FileText size={22} />}
-        accent="#059669"
-        accentLight="#d1fae5"
-      />
-      <KpiCard
-        label="Collected · Paid"
-        value={`PKR ${fmt(invoices.paidAmount)}`}
-        sub={`${colRate} collection rate`}
-        icon={<CheckCircle size={22} />}
-        accent="#059669"
-        accentLight="#d1fae5"
-      />
-      <KpiCard
-        label="Outstanding A/R"
-        value={`PKR ${fmt(invoices.outstanding)}`}
-        sub={`${invoices.notPaid + invoices.partial} invoices pending`}
-        icon={<AlertCircle size={22} />}
-        accent="#dc2626"
-        accentLight="#fee2e2"
-      />
-      <KpiCard
-        label="Open Quotations"
-        value={`${sales.b2c.drafts + sales.b2b.drafts}`}
-        sub={`B2C: ${sales.b2c.drafts} · B2B: ${sales.b2b.drafts}`}
-        icon={<Clock size={22} />}
-        accent="#d97706"
-        accentLight="#fef3c7"
-      />
     </div>
   );
 }
