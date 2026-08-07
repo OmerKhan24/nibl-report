@@ -17,7 +17,25 @@ export async function GET(req: NextRequest) {
     const fields = ['name', 'amount', 'date', 'partner_id', 'journal_id', 'payment_type'];
     const payments = await odooQuery<Payment[]>('account.payment', 'search_read', [domain], { fields, limit: 5000 });
 
-    // Helper functions (same logic as api/sales/route.ts)
+    // Step 1: Collect unique partner IDs
+    const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => p.partner_id[0]))];
+
+    // Step 2: Fetch city from res.partner
+    interface OdooPartner { id: number; name: string; city: string | false; }
+    const partnerRecords = partnerIds.length > 0
+      ? await odooQuery<OdooPartner[]>(
+          'res.partner', 'search_read',
+          [[['id', 'in', partnerIds]]],
+          { fields: ['id', 'name', 'city'], limit: 5000 }
+        )
+      : [];
+
+    const partnerCityMap = new Map<number, string | false>();
+    for (const p of partnerRecords) {
+      partnerCityMap.set(p.id, p.city);
+    }
+
+    // Helper functions
     function isB2C(payment: Payment): boolean {
       const partnerName = (payment.partner_id ? payment.partner_id[1] : '').toLowerCase();
       if (partnerName.includes('trax') || partnerName.includes('payfast') || partnerName.includes('pay fast') || partnerName.includes('postex') || partnerName.includes('shopify')) {
@@ -26,21 +44,22 @@ export async function GET(req: NextRequest) {
       return false;
     }
 
-    function inferCity(payment: Payment): string {
+    function getCityCategory(payment: Payment): string {
       const partnerName = payment.partner_id ? payment.partner_id[1] : '';
-      const nameUpper = partnerName.toUpperCase();
+      const partnerId = payment.partner_id ? payment.partner_id[0] : 0;
+      const odooCity = partnerCityMap.get(partnerId) || '';
       
-      if (nameUpper.includes('KHI') || nameUpper.includes('KARACHI') || nameUpper.includes('DHA') || nameUpper.includes('CLIFTON') || nameUpper.includes('GULSHAN') || nameUpper.includes('TARIQ ROAD') || nameUpper.includes('BAHADURABAD')) {
+      const combinedStr = `${partnerName} ${odooCity}`.toUpperCase();
+      
+      if (combinedStr.includes('KHI') || combinedStr.includes('KARACHI') || combinedStr.includes('DHA') || combinedStr.includes('CLIFTON') || combinedStr.includes('GULSHAN') || combinedStr.includes('TARIQ ROAD') || combinedStr.includes('BAHADURABAD')) {
         return 'Karachi';
       }
-      
-      if (nameUpper.includes('ISB') || nameUpper.includes('ISLAMABAD') || nameUpper.includes('ISL') || nameUpper.includes('G-10') || nameUpper.includes('F-7') || nameUpper.includes('BLUE AREA') || nameUpper.includes('JINNAH SUPER') || nameUpper.includes('F-11') || nameUpper.includes('G-9')) {
+      if (combinedStr.includes('ISB') || combinedStr.includes('ISLAMABAD') || combinedStr.includes('ISL') || combinedStr.includes('G-10') || combinedStr.includes('F-7') || combinedStr.includes('BLUE AREA') || combinedStr.includes('JINNAH SUPER') || combinedStr.includes('F-11') || combinedStr.includes('G-9') || combinedStr.includes('G-15')) {
         return 'Islamabad';
       }
-      if (nameUpper.includes('LHE') || nameUpper.includes('LAHORE') || nameUpper.includes('GULBERG') || nameUpper.includes('JOHAR TOWN') || nameUpper.includes('MODEL TOWN') || nameUpper.includes('DEFENCE LHE')) {
+      if (combinedStr.includes('LHE') || combinedStr.includes('LAHORE') || combinedStr.includes('GULBERG') || combinedStr.includes('JOHAR TOWN') || combinedStr.includes('MODEL TOWN') || combinedStr.includes('DEFENCE LHE')) {
         return 'Lahore';
       }
-      
       return 'Other'; // Fallback
     }
 
@@ -73,7 +92,7 @@ export async function GET(req: NextRequest) {
         continue; // B2C payments are isolated from KHI/ISB bank split
       }
 
-      const city = inferCity(p);
+      const city = getCityCategory(p);
 
       if (jId === 19) { // Faysal Bank
         if (city === 'Islamabad') { faysalIsb += amt; faysalIsbCount++; }
