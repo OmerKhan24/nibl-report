@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     // 1. Fetch sales grouped by product
     const domain = [
       ['state', 'in', ['sale', 'done']],
+      ['company_id', '=', 1],
       ['date', '>=', `${fromStr} 00:00:00`],
       ['date', '<=', `${toStr} 23:59:59`]
     ];

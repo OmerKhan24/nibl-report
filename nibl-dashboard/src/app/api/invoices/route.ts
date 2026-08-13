@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get('from');
     const to   = searchParams.get('to');
 
-    const dateDomain: unknown[] = [['move_type', '=', 'out_invoice'], ['state', '=', 'posted']];
+    const dateDomain: unknown[] = [['move_type', '=', 'out_invoice'], ['state', '=', 'posted'], ['company_id', '=', 1]];
     if (from) dateDomain.push(['invoice_date', '>=', from]);
     if (to)   dateDomain.push(['invoice_date', '<=', to]);
 

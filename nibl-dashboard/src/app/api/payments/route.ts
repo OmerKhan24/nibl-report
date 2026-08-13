@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get('from');
     const to   = searchParams.get('to');
 
-    const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', 'in', ['posted', 'paid', 'reconciled']]];
+    const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', 'in', ['posted', 'paid', 'reconciled']], ['company_id', '=', 1]];
     if (from) domain.push(['date', '>=', from]);
     if (to)   domain.push(['date', '<=', to]);
 

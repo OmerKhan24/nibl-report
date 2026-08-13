@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const to   = searchParams.get('to');   // YYYY-MM-DD
 
     // Build date domain filters
-    const dateDomain: unknown[] = [];
+    const dateDomain: unknown[] = [['company_id', '=', 1]];
     if (from) dateDomain.push(['date_order', '>=', `${from} 00:00:00`]);
     if (to)   dateDomain.push(['date_order', '<=', `${to} 23:59:59`]);
 
