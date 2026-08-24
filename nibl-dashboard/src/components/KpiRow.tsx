@@ -38,7 +38,7 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
   return (
     <div className={styles.grid}>
       <KpiCard
-        label="Gross P&L Revenue"
+        label="Gross Revenue"
         value={`PKR ${fmt(grossRevenue)}`}
         sub="Total posted income"
         icon={<FileText size={22} />}
@@ -54,20 +54,28 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
         accentLight="#fce7f3"
       />
       <KpiCard
-        label="Net P&L Revenue"
+        label="Net Revenue"
         value={`PKR ${fmt(invoices.pnlRevenue)}`}
-        sub="Gross Revenue minus Refunds"
+        sub="Gross minus Refunds"
         icon={<CheckCircle size={22} />}
         accent="#10b981"
         accentLight="#d1fae5"
       />
       <KpiCard
-        label="Sales Order Revenue"
-        value={`PKR ${fmt(totalRevenue)}`}
-        sub={`${sales.total.orders} confirmed orders`}
-        icon={<DollarSign size={22} />}
-        accent="#8b5cf6"
-        accentLight="#ede9fe"
+        label="B2C · Shopify"
+        value={`PKR ${fmt(sales.b2c.revenue)}`}
+        sub={`${sales.b2c.orders} orders · ${pct(sales.b2c.revenue)} of total`}
+        icon={<ShoppingCart size={22} />}
+        accent="var(--b2c)"
+        accentLight="var(--b2c-light)"
+      />
+      <KpiCard
+        label="B2B · Direct Sales"
+        value={`PKR ${fmt(sales.b2b.revenue)}`}
+        sub={`${sales.b2b.orders} orders · ${pct(sales.b2b.revenue)} of total`}
+        icon={<Building2 size={22} />}
+        accent="var(--b2b)"
+        accentLight="var(--b2b-light)"
       />
     </div>
   );
