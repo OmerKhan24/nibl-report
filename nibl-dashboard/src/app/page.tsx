@@ -10,6 +10,7 @@ import TopTable from '@/components/TopTable';
 import InvoiceStatus from '@/components/InvoiceStatus';
 import DateFilter from '@/components/DateFilter';
 import CityChart from '@/components/CityChart';
+import ChannelChart from '@/components/ChannelChart';
 import DeliveryChart from '@/components/DeliveryChart';
 import CashTab from '@/components/CashTab';
 import InventoryTab from '@/components/InventoryTab';
@@ -266,6 +267,7 @@ export default function DashboardPage() {
                     <MixDonut sales={sales} invoices={invoices} />
                   </div>
                 </div>
+                <ChannelChart data={sales.channelBreakdown} />
                 <CityChart data={sales.cityBreakdown} />
                 <DeliveryChart data={sales.deliveryStatus} />
                 <InvoiceStatus invoices={invoices} />

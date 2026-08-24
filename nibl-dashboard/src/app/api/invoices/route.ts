@@ -24,6 +24,22 @@ export async function GET(req: NextRequest) {
       }
     );
 
+    const refundDomain: unknown[] = [['move_type', '=', 'out_refund'], ['state', '=', 'posted'], ['company_id', '=', 1]];
+    if (from) refundDomain.push(['invoice_date', '>=', from]);
+    if (to)   refundDomain.push(['invoice_date', '<=', to]);
+
+    const refunds = await odooQuery<Invoice[]>('account.move', 'search_read',
+      [refundDomain],
+      {
+        fields: ['name', 'partner_id', 'amount_total', 'amount_untaxed',
+                 'state', 'invoice_date', 'payment_state', 'invoice_origin', 'amount_residual'],
+        limit: 5000,
+      }
+    );
+
+    const returnsAmount = refunds.reduce((a, r) => a + r.amount_total, 0);
+    const returnsCount = refunds.length;
+
     const total       = invoices.length;
     const totalAmount = invoices.reduce((a, i) => a + i.amount_total, 0);
 
@@ -80,6 +96,8 @@ export async function GET(req: NextRequest) {
       inPaymentAmount,
       outstanding,
       collectionRate,
+      returnsAmount,
+      returnsCount,
       outstandingCustomers,
     };
 

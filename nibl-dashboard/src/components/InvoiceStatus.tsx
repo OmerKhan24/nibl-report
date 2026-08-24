@@ -42,6 +42,12 @@ export default function InvoiceStatus({ invoices }: { invoices: InvoicesApiRespo
               {invoices.collectionRate.toFixed(1)}%
             </div>
           </div>
+          <div className={styles.totalItem}>
+            <div className={styles.totalLabel}>Returns / Refunds</div>
+            <div className={styles.totalVal} style={{ color: '#ec4899' }}>
+              PKR {fmt(invoices.returnsAmount)}
+            </div>
+          </div>
         </div>
       </div>
 

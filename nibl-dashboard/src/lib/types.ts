@@ -10,6 +10,7 @@ export interface SaleOrder {
   date_order: string;
   client_order_ref: string | false;
   invoice_status: string;
+  channel?: string;
 }
 
 export interface Invoice {
@@ -42,6 +43,13 @@ export interface PartnerRevenue {
 
 export interface CityRevenue {
   city: string;
+  orders: number;
+  revenue: number;
+  share: number;
+}
+
+export interface ChannelRevenue {
+  channel: string;
   orders: number;
   revenue: number;
   share: number;
@@ -82,6 +90,7 @@ export interface SalesApiResponse {
   topB2cChannels: PartnerRevenue[];
   topB2bCustomers: PartnerRevenue[];
   cityBreakdown: CityRevenue[];
+  channelBreakdown: ChannelRevenue[];
   deliveryStatus: DeliveryBreakdown;
 }
 
@@ -98,6 +107,8 @@ export interface InvoicesApiResponse {
   inPaymentAmount: number;
   outstanding: number;
   collectionRate: number;
+  returnsAmount: number;
+  returnsCount: number;
   outstandingCustomers: OutstandingCustomer[];
 }
 

@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     const fields = [
       'name', 'partner_id', 'amount_total', 'amount_untaxed',
       'state', 'date_order', 'client_order_ref', 'invoice_status',
+      'x_studio_related_field_23k_1k0f66e49'
     ];
 
     // Fetch all confirmed + draft orders in parallel (Odoo + Shopify)
@@ -82,7 +83,8 @@ export async function GET(req: NextRequest) {
         state,
         date_order: so.created_at ? so.created_at.replace('T', ' ').substring(0, 19) : '',
         client_order_ref: so.name,
-        invoice_status: so.fulfillment_status === 'fulfilled' ? 'invoiced' : (so.fulfillment_status === 'partial' ? 'to invoice' : 'nothing')
+        invoice_status: so.fulfillment_status === 'fulfilled' ? 'invoiced' : (so.fulfillment_status === 'partial' ? 'to invoice' : 'nothing'),
+        channel: 'Web' // Shopify orders are usually Web channel
       } as SaleOrder;
     }).filter(o => o.state !== 'cancel'); // Filter out unpaid cancelled orders
 
@@ -216,6 +218,31 @@ export async function GET(req: NextRequest) {
       b2b: buildDeliveryStats(b2bConfirmed),
     };
 
+    // ── Channel Breakdown (All Confirmed Orders) ────────────────
+    const channelMap = new Map<string, { orders: number; revenue: number }>();
+    const allConfirmedOrders = [...b2bConfirmed, ...b2cConfirmed];
+    
+    for (const o of allConfirmedOrders) {
+      let channelName = o.channel || 'Other';
+      if ((o as any).x_studio_related_field_23k_1k0f66e49) {
+        channelName = (o as any).x_studio_related_field_23k_1k0f66e49[1] || 'Other';
+      }
+      const entry = channelMap.get(channelName) ?? { orders: 0, revenue: 0 };
+      entry.orders++;
+      entry.revenue += o.amount_untaxed;
+      channelMap.set(channelName, entry);
+    }
+    
+    const totalRevenueAll = b2bRevenue + b2cRevenue;
+    const channelBreakdown = Array.from(channelMap.entries())
+      .map(([channel, d]) => ({
+        channel,
+        orders: d.orders,
+        revenue: d.revenue,
+        share: totalRevenueAll ? (d.revenue / totalRevenueAll) * 100 : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
     const response: SalesApiResponse = {
       b2c: {
         orders: allB2cOrders.length,
@@ -237,6 +264,7 @@ export async function GET(req: NextRequest) {
       topB2cChannels: topPartners(allB2cOrders, b2cRevenue),
       topB2bCustomers: topPartners(b2bConfirmed, b2bRevenue),
       cityBreakdown,
+      channelBreakdown,
       deliveryStatus,
     };
 
