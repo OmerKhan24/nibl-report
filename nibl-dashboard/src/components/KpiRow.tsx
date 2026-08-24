@@ -33,14 +33,15 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
   const pct = (n: number) => totalRevenue ? `${(n / totalRevenue * 100).toFixed(1)}%` : '—';
   const colRate = `${invoices.collectionRate.toFixed(1)}%`;
 
-  const grossRevenue = invoices.pnlRevenue + invoices.returnsAmount;
+  const grossRevenue = totalRevenue;
+  const netRevenue = grossRevenue - invoices.returnsAmount;
 
   return (
     <div className={styles.grid}>
       <KpiCard
         label="Gross Revenue"
         value={`PKR ${fmt(grossRevenue)}`}
-        sub="Total posted income"
+        sub={`${sales.total.orders} confirmed orders`}
         icon={<FileText size={22} />}
         accent="#2563eb"
         accentLight="#dbeafe"
@@ -55,7 +56,7 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
       />
       <KpiCard
         label="Net Revenue"
-        value={`PKR ${fmt(invoices.pnlRevenue)}`}
+        value={`PKR ${fmt(netRevenue)}`}
         sub="Gross minus Refunds"
         icon={<CheckCircle size={22} />}
         accent="#10b981"
