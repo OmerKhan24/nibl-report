@@ -109,6 +109,7 @@ export interface InvoicesApiResponse {
   collectionRate: number;
   returnsAmount: number;
   returnsCount: number;
+  pnlRevenue: number;
   outstandingCustomers: OutstandingCustomer[];
 }
 
