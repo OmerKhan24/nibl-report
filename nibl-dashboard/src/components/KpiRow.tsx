@@ -33,39 +33,41 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
   const pct = (n: number) => totalRevenue ? `${(n / totalRevenue * 100).toFixed(1)}%` : '—';
   const colRate = `${invoices.collectionRate.toFixed(1)}%`;
 
+  const grossRevenue = invoices.pnlRevenue + invoices.returnsAmount;
+
   return (
     <div className={styles.grid}>
+      <KpiCard
+        label="Gross P&L Revenue"
+        value={`PKR ${fmt(grossRevenue)}`}
+        sub="Total posted income"
+        icon={<FileText size={22} />}
+        accent="#2563eb"
+        accentLight="#dbeafe"
+      />
+      <KpiCard
+        label="Refunds & Returns"
+        value={`- PKR ${fmt(invoices.returnsAmount)}`}
+        sub={`${invoices.returnsCount} total return entries`}
+        icon={<AlertCircle size={22} />}
+        accent="#ec4899"
+        accentLight="#fce7f3"
+      />
+      <KpiCard
+        label="Net P&L Revenue"
+        value={`PKR ${fmt(invoices.pnlRevenue)}`}
+        sub="Gross Revenue minus Refunds"
+        icon={<CheckCircle size={22} />}
+        accent="#10b981"
+        accentLight="#d1fae5"
+      />
       <KpiCard
         label="Sales Order Revenue"
         value={`PKR ${fmt(totalRevenue)}`}
         sub={`${sales.total.orders} confirmed orders`}
         icon={<DollarSign size={22} />}
-        accent="#2563eb"
-        accentLight="#dbeafe"
-      />
-      <KpiCard
-        label="Accounting P&L Revenue"
-        value={`PKR ${fmt(invoices.pnlRevenue)}`}
-        sub="From posted Income lines"
-        icon={<FileText size={22} />}
-        accent="#10b981"
-        accentLight="#d1fae5"
-      />
-      <KpiCard
-        label="B2C · Shopify"
-        value={`PKR ${fmt(sales.b2c.revenue)}`}
-        sub={`${sales.b2c.orders} orders · ${pct(sales.b2c.revenue)} of total`}
-        icon={<ShoppingCart size={22} />}
-        accent="var(--b2c)"
-        accentLight="var(--b2c-light)"
-      />
-      <KpiCard
-        label="B2B · Direct Sales"
-        value={`PKR ${fmt(sales.b2b.revenue)}`}
-        sub={`${sales.b2b.orders} orders · ${pct(sales.b2b.revenue)} of total`}
-        icon={<Building2 size={22} />}
-        accent="var(--b2b)"
-        accentLight="var(--b2b-light)"
+        accent="#8b5cf6"
+        accentLight="#ede9fe"
       />
     </div>
   );

@@ -8,37 +8,43 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const from = searchParams.get('from');
-    const to   = searchParams.get('to');
+    const to = searchParams.get('to');
 
     const dateDomain: unknown[] = [['move_type', '=', 'out_invoice'], ['state', '=', 'posted'], ['company_id', '=', 1]];
     if (from) dateDomain.push(['invoice_date', '>=', from]);
-    if (to)   dateDomain.push(['invoice_date', '<=', to]);
+    if (to) dateDomain.push(['invoice_date', '<=', to]);
 
     const invoices = await odooQuery<Invoice[]>('account.move', 'search_read',
       [dateDomain],
       {
         fields: ['name', 'partner_id', 'amount_total', 'amount_untaxed',
-                 'state', 'invoice_date', 'payment_state', 'invoice_origin', 'amount_residual'],
+          'state', 'invoice_date', 'payment_state', 'invoice_origin', 'amount_residual'],
         limit: 5000,
         order: 'invoice_date desc',
       }
     );
 
-    const refundDomain: unknown[] = [['move_type', '=', 'out_refund'], ['state', '=', 'posted'], ['company_id', '=', 1]];
-    if (from) refundDomain.push(['invoice_date', '>=', from]);
-    if (to)   refundDomain.push(['invoice_date', '<=', to]);
+    // ── Returns from Account 31005 (Sale Return) ────────────────
+    let returnsAmount = 0;
+    let returnsCount = 0;
+    const returnAccs = await odooQuery<number[]>('account.account', 'search', [[['code', '=', '31005']]]);
+    if (returnAccs.length > 0) {
+      const returnDomain: unknown[] = [
+        ['parent_state', '=', 'posted'],
+        ['company_id', '=', 1],
+        ['account_id', 'in', returnAccs]
+      ];
+      if (from) returnDomain.push(['date', '>=', from]);
+      if (to) returnDomain.push(['date', '<=', to]);
 
-    const refunds = await odooQuery<Invoice[]>('account.move', 'search_read',
-      [refundDomain],
-      {
-        fields: ['name', 'partner_id', 'amount_total', 'amount_untaxed',
-                 'state', 'invoice_date', 'payment_state', 'invoice_origin', 'amount_residual'],
-        limit: 5000,
-      }
-    );
-
-    const returnsAmount = refunds.reduce((a, r) => a + r.amount_total, 0);
-    const returnsCount = refunds.length;
+      const returnLines = await odooQuery<{ balance: number }[]>('account.move.line', 'search_read',
+        [returnDomain],
+        { fields: ['balance'], limit: 5000 }
+      );
+      // Debit balances on income accounts are positive. P&L displays them as negative.
+      returnsAmount = returnLines.reduce((acc, line) => acc + line.balance, 0);
+      returnsCount = returnLines.length;
+    }
 
     // ── P&L Revenue (Accounting) ─────────────────────────────
     const pnlDomain: unknown[] = [
@@ -47,7 +53,7 @@ export async function GET(req: NextRequest) {
       ['account_type', 'in', ['income', 'income_other']]
     ];
     if (from) pnlDomain.push(['date', '>=', from]);
-    if (to)   pnlDomain.push(['date', '<=', to]);
+    if (to) pnlDomain.push(['date', '<=', to]);
 
     const pnlLines = await odooQuery<{ balance: number }[]>('account.move.line', 'search_read',
       [pnlDomain],
@@ -55,24 +61,24 @@ export async function GET(req: NextRequest) {
     );
     const pnlRevenue = pnlLines.reduce((acc, line) => acc + (-line.balance), 0);
 
-    const total       = invoices.length;
+    const total = invoices.length;
     const totalAmount = invoices.reduce((a, i) => a + i.amount_total, 0);
 
     const byState = (ps: string) => invoices.filter(i => i.payment_state === ps);
-    const sumAmt  = (arr: Invoice[]) => arr.reduce((a, i) => a + i.amount_total, 0);
+    const sumAmt = (arr: Invoice[]) => arr.reduce((a, i) => a + i.amount_total, 0);
 
-    const paidInvs      = byState('paid');
-    const partialInvs   = byState('partial');
-    const notPaidInvs   = byState('not_paid');
+    const paidInvs = byState('paid');
+    const partialInvs = byState('partial');
+    const notPaidInvs = byState('not_paid');
     const inPaymentInvs = byState('in_payment');
 
-    const paidAmount      = sumAmt(paidInvs);
-    const partialAmount   = sumAmt(partialInvs);
-    const notPaidAmount   = sumAmt(notPaidInvs);
+    const paidAmount = sumAmt(paidInvs);
+    const partialAmount = sumAmt(partialInvs);
+    const notPaidAmount = sumAmt(notPaidInvs);
     const inPaymentAmount = sumAmt(inPaymentInvs);
 
-    const outstanding     = notPaidAmount + partialAmount;
-    const collectionRate  = totalAmount > 0
+    const outstanding = notPaidAmount + partialAmount;
+    const collectionRate = totalAmount > 0
       ? ((paidAmount + partialAmount * 0.5) / totalAmount) * 100
       : 0;
 
@@ -84,7 +90,7 @@ export async function GET(req: NextRequest) {
       const pname = inv.partner_id[1];
       // Fallback to amount_total if amount_residual is undefined
       const residual = (inv as any).amount_residual !== undefined ? (inv as any).amount_residual : inv.amount_total;
-      
+
       if (!outMap.has(pid)) {
         outMap.set(pid, { id: pid, name: pname, amountOutstanding: 0, invoiceCount: 0 });
       }
