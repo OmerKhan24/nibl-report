@@ -36,12 +36,20 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
   return (
     <div className={styles.grid}>
       <KpiCard
-        label="Total Revenue"
+        label="Sales Order Revenue"
         value={`PKR ${fmt(totalRevenue)}`}
         sub={`${sales.total.orders} confirmed orders`}
         icon={<DollarSign size={22} />}
         accent="#2563eb"
         accentLight="#dbeafe"
+      />
+      <KpiCard
+        label="Accounting P&L Revenue"
+        value={`PKR ${fmt(invoices.pnlRevenue)}`}
+        sub="From posted Income lines"
+        icon={<FileText size={22} />}
+        accent="#10b981"
+        accentLight="#d1fae5"
       />
       <KpiCard
         label="B2C · Shopify"

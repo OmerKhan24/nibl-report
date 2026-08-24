@@ -40,6 +40,21 @@ export async function GET(req: NextRequest) {
     const returnsAmount = refunds.reduce((a, r) => a + r.amount_total, 0);
     const returnsCount = refunds.length;
 
+    // ── P&L Revenue (Accounting) ─────────────────────────────
+    const pnlDomain: unknown[] = [
+      ['parent_state', '=', 'posted'],
+      ['company_id', '=', 1],
+      ['account_type', 'in', ['income', 'income_other']]
+    ];
+    if (from) pnlDomain.push(['date', '>=', from]);
+    if (to)   pnlDomain.push(['date', '<=', to]);
+
+    const pnlLines = await odooQuery<{ balance: number }[]>('account.move.line', 'search_read',
+      [pnlDomain],
+      { fields: ['balance'], limit: 10000 }
+    );
+    const pnlRevenue = pnlLines.reduce((acc, line) => acc + (-line.balance), 0);
+
     const total       = invoices.length;
     const totalAmount = invoices.reduce((a, i) => a + i.amount_total, 0);
 
@@ -98,6 +113,7 @@ export async function GET(req: NextRequest) {
       collectionRate,
       returnsAmount,
       returnsCount,
+      pnlRevenue,
       outstandingCustomers,
     };
 
