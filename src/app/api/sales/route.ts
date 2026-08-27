@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       const isUnpaidCancelled = so.cancelled_at && (so.financial_status === 'pending' || so.financial_status === 'voided');
       const state = isUnpaidCancelled ? 'cancel' : 'sale';
       
-      const total = parseFloat(so.current_subtotal_price || so.subtotal_price || '0');
+      const total = parseFloat(so.current_total_price || so.total_price || '0');
       const tax = parseFloat(so.current_total_tax || so.total_tax || '0');
 
       return {
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
 
     const allB2cOrders = [...b2cConfirmed, ...b2cDraft];
 
-    const sum = (orders: SaleOrder[]) => orders.reduce((a, o) => a + o.amount_untaxed, 0);
+    const sum = (orders: SaleOrder[]) => orders.reduce((a, o) => a + o.amount_total, 0);
 
     const b2cRevenue = sum(allB2cOrders);
     const b2bRevenue = sum(b2bConfirmed);
@@ -106,14 +106,14 @@ export async function GET(req: NextRequest) {
       const m = getMonth(o.date_order);
       const entry = monthlyMap.get(m) ?? { month: m, b2cOrders: 0, b2cRevenue: 0, b2bOrders: 0, b2bRevenue: 0 };
       entry.b2cOrders++;
-      entry.b2cRevenue += o.amount_untaxed;
+      entry.b2cRevenue += o.amount_total;
       monthlyMap.set(m, entry);
     }
     for (const o of b2bConfirmed) {
       const m = getMonth(o.date_order);
       const entry = monthlyMap.get(m) ?? { month: m, b2cOrders: 0, b2cRevenue: 0, b2bOrders: 0, b2bRevenue: 0 };
       entry.b2bOrders++;
-      entry.b2bRevenue += o.amount_untaxed;
+      entry.b2bRevenue += o.amount_total;
       monthlyMap.set(m, entry);
     }
     const monthly = Array.from(monthlyMap.values())
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
         const name = o.partner_id ? o.partner_id[1] : 'Unknown';
         const entry = map.get(name) ?? { orders: 0, revenue: 0, firstOrderDate: o.date_order };
         entry.orders++;
-        entry.revenue += o.amount_untaxed;
+        entry.revenue += o.amount_total;
         if (o.date_order && (!entry.firstOrderDate || o.date_order < entry.firstOrderDate)) {
           entry.firstOrderDate = o.date_order;
         }
@@ -182,7 +182,7 @@ export async function GET(req: NextRequest) {
       const city = partnerCityMap.get(o.partner_id[0]) ?? 'Other';
       const entry = cityMap.get(city) ?? { orders: 0, revenue: 0 };
       entry.orders++;
-      entry.revenue += o.amount_untaxed;
+      entry.revenue += o.amount_total;
       cityMap.set(city, entry);
     }
 
@@ -203,11 +203,11 @@ export async function GET(req: NextRequest) {
       for (const o of orders) {
         const s = (o.invoice_status || '') as string;
         if (s === 'invoiced') {
-          delivered++; deliveredRevenue += o.amount_untaxed;
+          delivered++; deliveredRevenue += o.amount_total;
         } else if (s === 'to invoice') {
-          beingDelivered++; beingDeliveredRevenue += o.amount_untaxed;
+          beingDelivered++; beingDeliveredRevenue += o.amount_total;
         } else {
-          notStarted++; notStartedRevenue += o.amount_untaxed;
+          notStarted++; notStartedRevenue += o.amount_total;
         }
       }
       return { delivered, beingDelivered, notStarted, deliveredRevenue, beingDeliveredRevenue, notStartedRevenue };
@@ -229,7 +229,7 @@ export async function GET(req: NextRequest) {
       }
       const entry = channelMap.get(channelName) ?? { orders: 0, revenue: 0 };
       entry.orders++;
-      entry.revenue += o.amount_untaxed;
+      entry.revenue += o.amount_total;
       channelMap.set(channelName, entry);
     }
     
