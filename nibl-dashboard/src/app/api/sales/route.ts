@@ -60,8 +60,9 @@ export async function GET(req: NextRequest) {
     }
 
     // We still filter Odoo orders to separate B2B from B2C (to ignore Odoo's B2C copies)
-    const b2bConfirmed = allConfirmed.filter(o => !isB2C(o));
-    const b2bDraft     = allDraft.filter(o => !isB2C(o));
+    // Override amount_total with amount_untaxed for B2B to show untaxed revenue across the dashboard
+    const b2bConfirmed = allConfirmed.filter(o => !isB2C(o)).map(o => ({ ...o, amount_total: typeof o.amount_untaxed === 'number' ? o.amount_untaxed : o.amount_total }));
+    const b2bDraft     = allDraft.filter(o => !isB2C(o)).map(o => ({ ...o, amount_total: typeof o.amount_untaxed === 'number' ? o.amount_untaxed : o.amount_total }));
 
     // Map Shopify orders to standard SaleOrder format
     const shopifyOrders = shopifyOrdersRaw.filter((so: any) => !so.test).map((so: any) => {
