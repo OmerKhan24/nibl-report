@@ -82,9 +82,30 @@ export async function GET(req: NextRequest) {
       ? ((paidAmount + partialAmount * 0.5) / totalAmount) * 100
       : 0;
 
-    // Build Outstanding Customers List
+    // Build Outstanding Customers List (90 Days)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
+
+    const outstandingDomain: unknown[] = [
+      ['move_type', '=', 'out_invoice'],
+      ['state', '=', 'posted'],
+      ['company_id', '=', 1],
+      ['payment_state', 'in', ['not_paid', 'partial']],
+      ['invoice_date', '>=', ninetyDaysAgoStr]
+    ];
+
+    const outstandingInvoices = await odooQuery<Invoice[]>('account.move', 'search_read',
+      [outstandingDomain],
+      {
+        fields: ['partner_id', 'amount_total', 'amount_residual'],
+        limit: 5000,
+        order: 'invoice_date desc',
+      }
+    );
+
     const outMap = new Map<number, import('@/lib/types').OutstandingCustomer>();
-    [...notPaidInvs, ...partialInvs].forEach(inv => {
+    outstandingInvoices.forEach(inv => {
       if (!inv.partner_id) return;
       const pid = inv.partner_id[0];
       const pname = inv.partner_id[1];
