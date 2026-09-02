@@ -240,25 +240,25 @@ export default function DashboardPage() {
                   />
                   <TargetCard 
                     title="D2C Sales" 
-                    actual={sales.channelTargetsData.d2c} 
+                    actual={sales.channelTargetsData.d2c.revenue} 
                     dateRange={dateRange} 
                     storageKey="nibl_d2c_target" 
                   />
                   <TargetCard 
                     title="Ecommerce Sales" 
-                    actual={sales.channelTargetsData.ecommerce} 
+                    actual={sales.channelTargetsData.ecommerce.revenue} 
                     dateRange={dateRange} 
                     storageKey="nibl_ecommerce_target" 
                   />
                   <TargetCard 
                     title="Gyms Sales" 
-                    actual={sales.channelTargetsData.gyms} 
+                    actual={sales.channelTargetsData.gyms.revenue} 
                     dateRange={dateRange} 
                     storageKey="nibl_gyms_target" 
                   />
                   <TargetCard 
                     title="Retail/Physical Sales" 
-                    actual={sales.channelTargetsData.retail} 
+                    actual={sales.channelTargetsData.retail.revenue} 
                     dateRange={dateRange} 
                     storageKey="nibl_retail_target" 
                   />
