@@ -69,6 +69,13 @@ export interface DeliveryBreakdown {
   b2b: DeliveryStats;
 }
 
+export interface ChannelTargetsData {
+  d2c: number;
+  ecommerce: number;
+  gyms: number;
+  retail: number;
+}
+
 export interface SalesApiResponse {
   b2c: {
     orders: number;
@@ -92,6 +99,7 @@ export interface SalesApiResponse {
   cityBreakdown: CityRevenue[];
   channelBreakdown: ChannelRevenue[];
   deliveryStatus: DeliveryBreakdown;
+  channelTargetsData: ChannelTargetsData;
 }
 
 export interface InvoicesApiResponse {

@@ -244,6 +244,33 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
+    // ── Channel Targets Calculation ─────────────────────────────
+    let ecommerceRevenue = 0;
+    let gymsRevenue = 0;
+    let retailRevenue = 0;
+
+    for (const o of b2bConfirmed) {
+      let cName = 'Other';
+      if ((o as any).x_studio_related_field_23k_1k0f66e49) {
+        cName = (o as any).x_studio_related_field_23k_1k0f66e49[1];
+      }
+      
+      if (cName === 'Online Market Place') {
+        ecommerceRevenue += o.amount_total;
+      } else if (cName === 'GYM') {
+        gymsRevenue += o.amount_total;
+      } else {
+        retailRevenue += o.amount_total;
+      }
+    }
+
+    const channelTargetsData = {
+      d2c: b2cRevenue,
+      ecommerce: ecommerceRevenue,
+      gyms: gymsRevenue,
+      retail: retailRevenue
+    };
+
     const response: SalesApiResponse = {
       b2c: {
         orders: allB2cOrders.length,
@@ -267,6 +294,7 @@ export async function GET(req: NextRequest) {
       cityBreakdown,
       channelBreakdown,
       deliveryStatus,
+      channelTargetsData,
     };
 
     return NextResponse.json(response, {

@@ -231,12 +231,38 @@ export default function DashboardPage() {
           <>
             {activeTab === 'sales' ? (
               <>
-                <TargetCard 
-                  title="Sales" 
-                  actual={sales.total.revenue} 
-                  dateRange={dateRange} 
-                  storageKey="nibl_sales_target" 
-                />
+                <div className={styles.targetsGrid}>
+                  <TargetCard 
+                    title="Overall Sales" 
+                    actual={sales.total.revenue} 
+                    dateRange={dateRange} 
+                    storageKey="nibl_sales_target" 
+                  />
+                  <TargetCard 
+                    title="D2C Sales" 
+                    actual={sales.channelTargetsData.d2c} 
+                    dateRange={dateRange} 
+                    storageKey="nibl_d2c_target" 
+                  />
+                  <TargetCard 
+                    title="Ecommerce Sales" 
+                    actual={sales.channelTargetsData.ecommerce} 
+                    dateRange={dateRange} 
+                    storageKey="nibl_ecommerce_target" 
+                  />
+                  <TargetCard 
+                    title="Gyms Sales" 
+                    actual={sales.channelTargetsData.gyms} 
+                    dateRange={dateRange} 
+                    storageKey="nibl_gyms_target" 
+                  />
+                  <TargetCard 
+                    title="Retail/Physical Sales" 
+                    actual={sales.channelTargetsData.retail} 
+                    dateRange={dateRange} 
+                    storageKey="nibl_retail_target" 
+                  />
+                </div>
                 <div style={{ marginTop: '1.5rem' }}>
                   <KpiRow sales={sales} invoices={invoices} />
                 </div>
