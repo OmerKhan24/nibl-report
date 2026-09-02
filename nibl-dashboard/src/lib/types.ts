@@ -69,26 +69,23 @@ export interface DeliveryBreakdown {
   b2b: DeliveryStats;
 }
 
+export interface ChannelStats {
+  orders: number;
+  revenue: number;
+  avgOrder: number;
+  drafts: number;
+}
+
 export interface ChannelTargetsData {
-  d2c: number;
-  ecommerce: number;
-  gyms: number;
-  retail: number;
+  d2c: ChannelStats;
+  ecommerce: ChannelStats;
+  gyms: ChannelStats;
+  retail: ChannelStats;
 }
 
 export interface SalesApiResponse {
-  b2c: {
-    orders: number;
-    revenue: number;
-    avgOrder: number;
-    drafts: number;
-  };
-  b2b: {
-    orders: number;
-    revenue: number;
-    avgOrder: number;
-    drafts: number;
-  };
+  b2c: ChannelStats;
+  b2b: ChannelStats;
   total: {
     orders: number;
     revenue: number;

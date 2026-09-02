@@ -245,30 +245,66 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.revenue - a.revenue);
 
     // ── Channel Targets Calculation ─────────────────────────────
-    let ecommerceRevenue = 0;
-    let gymsRevenue = 0;
-    let retailRevenue = 0;
+    let ecommerceRevenue = 0, ecommerceOrders = 0, ecommerceDrafts = 0;
+    let gymsRevenue = 0, gymsOrders = 0, gymsDrafts = 0;
+    let retailRevenue = 0, retailOrders = 0, retailDrafts = 0;
 
     for (const o of b2bConfirmed) {
       let cName = 'Other';
       if ((o as any).x_studio_related_field_23k_1k0f66e49) {
         cName = (o as any).x_studio_related_field_23k_1k0f66e49[1];
       }
-      
       if (cName === 'Online Market Place') {
         ecommerceRevenue += o.amount_total;
+        ecommerceOrders++;
       } else if (cName === 'GYM') {
         gymsRevenue += o.amount_total;
+        gymsOrders++;
       } else {
         retailRevenue += o.amount_total;
+        retailOrders++;
+      }
+    }
+
+    for (const o of b2bDraft) {
+      let cName = 'Other';
+      if ((o as any).x_studio_related_field_23k_1k0f66e49) {
+        cName = (o as any).x_studio_related_field_23k_1k0f66e49[1];
+      }
+      if (cName === 'Online Market Place') {
+        ecommerceDrafts++;
+      } else if (cName === 'GYM') {
+        gymsDrafts++;
+      } else {
+        retailDrafts++;
       }
     }
 
     const channelTargetsData = {
-      d2c: b2cRevenue,
-      ecommerce: ecommerceRevenue,
-      gyms: gymsRevenue,
-      retail: retailRevenue
+      d2c: {
+        orders: allB2cOrders.length,
+        revenue: b2cRevenue,
+        avgOrder: allB2cOrders.length ? b2cRevenue / allB2cOrders.length : 0,
+        drafts: b2cDraft.length,
+      },
+      ecommerce: {
+        orders: ecommerceOrders,
+        revenue: ecommerceRevenue,
+        avgOrder: ecommerceOrders ? ecommerceRevenue / ecommerceOrders : 0,
+        drafts: ecommerceDrafts,
+      },
+      gyms: {
+        orders: gymsOrders,
+        revenue: gymsRevenue,
+        avgOrder: gymsOrders ? gymsRevenue / gymsOrders : 0,
+        drafts: gymsDrafts,
+      },
+      retail: {
+        orders: retailOrders,
+        revenue: retailRevenue,
+        avgOrder: retailOrders ? retailRevenue / retailOrders : 0,
+        drafts: retailDrafts,
+      }
     };
 
     const response: SalesApiResponse = {
