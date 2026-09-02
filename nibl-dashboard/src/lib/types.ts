@@ -93,6 +93,9 @@ export interface SalesApiResponse {
   monthly: MonthlyData[];
   topB2cChannels: PartnerRevenue[];
   topB2bCustomers: PartnerRevenue[];
+  topEcommerceCustomers: PartnerRevenue[];
+  topGymsCustomers: PartnerRevenue[];
+  topRetailCustomers: PartnerRevenue[];
   cityBreakdown: CityRevenue[];
   channelBreakdown: ChannelRevenue[];
   deliveryStatus: DeliveryBreakdown;

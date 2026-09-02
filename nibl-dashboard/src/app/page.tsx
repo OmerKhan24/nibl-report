@@ -269,7 +269,7 @@ export default function DashboardPage() {
                 <ChannelCards sales={sales} />
                 <div className={styles.tablesRow}>
                   <TopTable
-                    title="Top B2C Channels"
+                    title="All B2C Channels"
                     subtitle="Shopify · Delivery Partners"
                     color="var(--b2c)"
                     colorLight="var(--b2c-light)"
@@ -277,12 +277,28 @@ export default function DashboardPage() {
                     icon="🛒"
                   />
                   <TopTable
-                    title="Top B2B Customers"
-                    subtitle="Direct · Trade Accounts"
+                    title="All Retail Customers"
+                    subtitle="Trade · Schools · Vending"
                     color="var(--b2b)"
                     colorLight="var(--b2b-light)"
-                    rows={sales.topB2bCustomers}
+                    rows={sales.topRetailCustomers}
                     icon="🏢"
+                  />
+                  <TopTable
+                    title="All Gyms Customers"
+                    subtitle="Health · Gyms"
+                    color="var(--b2b)"
+                    colorLight="var(--b2b-light)"
+                    rows={sales.topGymsCustomers}
+                    icon="🏋️"
+                  />
+                  <TopTable
+                    title="All Ecommerce Customers"
+                    subtitle="Pandamart · Kravemart"
+                    color="var(--b2c)"
+                    colorLight="var(--b2c-light)"
+                    rows={sales.topEcommerceCustomers}
+                    icon="📦"
                   />
                 </div>
                 <div className={styles.chartsRow}>

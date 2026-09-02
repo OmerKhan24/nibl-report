@@ -249,6 +249,10 @@ export async function GET(req: NextRequest) {
     let gymsRevenue = 0, gymsOrders = 0, gymsDrafts = 0;
     let retailRevenue = 0, retailOrders = 0, retailDrafts = 0;
 
+    const ecommerceOrdersList: SaleOrder[] = [];
+    const gymsOrdersList: SaleOrder[] = [];
+    const retailOrdersList: SaleOrder[] = [];
+
     for (const o of b2bConfirmed) {
       let cName = 'Other';
       if ((o as any).x_studio_related_field_23k_1k0f66e49) {
@@ -257,12 +261,15 @@ export async function GET(req: NextRequest) {
       if (cName === 'Online Market Place') {
         ecommerceRevenue += o.amount_total;
         ecommerceOrders++;
+        ecommerceOrdersList.push(o);
       } else if (cName === 'GYM') {
         gymsRevenue += o.amount_total;
         gymsOrders++;
+        gymsOrdersList.push(o);
       } else {
         retailRevenue += o.amount_total;
         retailOrders++;
+        retailOrdersList.push(o);
       }
     }
 
@@ -327,6 +334,9 @@ export async function GET(req: NextRequest) {
       monthly,
       topB2cChannels: topPartners(allB2cOrders, b2cRevenue),
       topB2bCustomers: topPartners(b2bConfirmed, b2bRevenue),
+      topEcommerceCustomers: topPartners(ecommerceOrdersList, ecommerceRevenue),
+      topGymsCustomers: topPartners(gymsOrdersList, gymsRevenue),
+      topRetailCustomers: topPartners(retailOrdersList, retailRevenue),
       cityBreakdown,
       channelBreakdown,
       deliveryStatus,
