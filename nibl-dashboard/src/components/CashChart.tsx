@@ -4,6 +4,9 @@ import styles from './CashChart.module.css';
 interface Props {
   sources: CashSource[];
   total: number;
+  title?: string;
+  subtitle?: string;
+  hideCitySummary?: boolean;
 }
 
 function fmt(n: number) {
@@ -13,6 +16,7 @@ function fmt(n: number) {
 }
 
 const COLORS: Record<string, string> = {
+  // Original
   'B2C (Shopify/Trax/Postex)': 'var(--b2c)',
   'Faysal Bank (KHI)': 'var(--b2b)',
   'Faysal Bank (ISB)': 'var(--b2b-light)',
@@ -26,16 +30,22 @@ const COLORS: Record<string, string> = {
   'Cash in Hand (ISB)': '#fbbf24', // amber light
   'Cash in Hand (LHE)': '#d97706', // amber dark
   'Other Channels': '#94a3b8', // slate
+  
+  // Channels
+  'D2C — Shopify / Web': 'var(--b2c)',
+  'Ecommerce — Pandamart / Kravemart': '#3b82f6', // blue
+  'Gyms — Health': '#8b5cf6', // violet
+  'Retail — Physical / Other': 'var(--b2b)',
 };
 
-export default function CashChart({ sources, total }: Props) {
+export default function CashChart({ sources, total, title = "Cash Collection Overview", subtitle = "Daily cash generation by source & city", hideCitySummary = false }: Props) {
   const sorted = [...sources].sort((a, b) => b.amount - a.amount);
   
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Cash Collection Overview</h2>
-        <p className={styles.subtitle}>Daily cash generation by source & city</p>
+        <h2 className={styles.title}>{title}</h2>
+        <p className={styles.subtitle}>{subtitle}</p>
       </div>
 
       <div className={styles.totalRow}>
@@ -43,38 +53,40 @@ export default function CashChart({ sources, total }: Props) {
         <div className={styles.totalLabel}>Total Inbound Cash</div>
       </div>
 
-      <div className={styles.citySummary} style={{ display: 'flex', gap: '16px', margin: '0 24px 20px', padding: '16px', background: 'var(--surface2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        <div className={styles.cityBox} style={{ flex: 1 }}>
-          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Karachi Total</div>
-          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
-            sources.filter(s => s.name.includes('(KHI)')).reduce((a, b) => a + b.amount, 0)
-          )}</div>
+      {!hideCitySummary && (
+        <div className={styles.citySummary} style={{ display: 'flex', gap: '16px', margin: '0 24px 20px', padding: '16px', background: 'var(--surface2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <div className={styles.cityBox} style={{ flex: 1 }}>
+            <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Karachi Total</div>
+            <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+              sources.filter(s => s.name.includes('(KHI)')).reduce((a, b) => a + b.amount, 0)
+            )}</div>
+          </div>
+          <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
+            <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Islamabad Total</div>
+            <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+              sources.filter(s => s.name.includes('(ISB)')).reduce((a, b) => a + b.amount, 0)
+            )}</div>
+          </div>
+          <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
+            <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lahore Total</div>
+            <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+              sources.filter(s => s.name.includes('(LHE)')).reduce((a, b) => a + b.amount, 0)
+            )}</div>
+          </div>
+          <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
+            <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Other Total</div>
+            <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+              sources.filter(s => s.name.includes('(Other)') || s.name === 'Other Channels').reduce((a, b) => a + b.amount, 0)
+            )}</div>
+          </div>
+          <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
+            <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>B2C Total</div>
+            <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
+              sources.find(s => s.name.includes('B2C'))?.amount || 0
+            )}</div>
+          </div>
         </div>
-        <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
-          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Islamabad Total</div>
-          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
-            sources.filter(s => s.name.includes('(ISB)')).reduce((a, b) => a + b.amount, 0)
-          )}</div>
-        </div>
-        <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
-          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lahore Total</div>
-          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
-            sources.filter(s => s.name.includes('(LHE)')).reduce((a, b) => a + b.amount, 0)
-          )}</div>
-        </div>
-        <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
-          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Other Total</div>
-          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
-            sources.filter(s => s.name.includes('(Other)') || s.name === 'Other Channels').reduce((a, b) => a + b.amount, 0)
-          )}</div>
-        </div>
-        <div className={styles.cityBox} style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: '16px' }}>
-          <div className={styles.cityLabel} style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>B2C Total</div>
-          <div className={styles.cityAmount} style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginTop: '4px' }}>PKR {fmt(
-            sources.find(s => s.name.includes('B2C'))?.amount || 0
-          )}</div>
-        </div>
-      </div>
+      )}
 
       <div className={styles.barWrap}>
         <div className={styles.bar}>

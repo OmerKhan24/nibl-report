@@ -140,6 +140,7 @@ export interface CashSource {
 export interface CashApiResponse {
   total: number;
   sources: CashSource[];
+  channelSources: CashSource[];
   channelTargetsData: {
     d2c: number;
     ecommerce: number;

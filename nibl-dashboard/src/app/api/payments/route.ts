@@ -8,11 +8,11 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const from = searchParams.get('from');
-    const to   = searchParams.get('to');
+    const to = searchParams.get('to');
 
     const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', 'in', ['posted', 'paid', 'reconciled']], ['company_id', '=', 1]];
     if (from) domain.push(['date', '>=', from]);
-    if (to)   domain.push(['date', '<=', to]);
+    if (to) domain.push(['date', '<=', to]);
 
     const fields = ['name', 'amount', 'date', 'partner_id', 'journal_id', 'payment_type'];
     const payments = await odooQuery<Payment[]>('account.payment', 'search_read', [domain], { fields, limit: 5000 });
@@ -24,10 +24,10 @@ export async function GET(req: NextRequest) {
     interface OdooPartner { id: number; name: string; city: string | false; x_studio_channel?: [number, string] | false; }
     const partnerRecords = partnerIds.length > 0
       ? await odooQuery<OdooPartner[]>(
-          'res.partner', 'search_read',
-          [[['id', 'in', partnerIds]]],
-          { fields: ['id', 'name', 'city', 'x_studio_channel'], limit: 5000 }
-        )
+        'res.partner', 'search_read',
+        [[['id', 'in', partnerIds]]],
+        { fields: ['id', 'name', 'city', 'x_studio_channel'], limit: 5000 }
+      )
       : [];
 
     const partnerCityMap = new Map<number, string | false>();
@@ -52,9 +52,9 @@ export async function GET(req: NextRequest) {
       const partnerName = payment.partner_id ? payment.partner_id[1] : '';
       const partnerId = payment.partner_id ? (payment.partner_id as [number, string])[0] : 0;
       const odooCity = partnerCityMap.get(partnerId) || '';
-      
+
       const combinedStr = `${partnerName} ${odooCity}`.toUpperCase();
-      
+
       if (combinedStr.includes('KHI') || combinedStr.includes('KARACHI') || combinedStr.includes('DHA') || combinedStr.includes('CLIFTON') || combinedStr.includes('GULSHAN') || combinedStr.includes('TARIQ ROAD') || combinedStr.includes('BAHADURABAD')) {
         return 'Karachi';
       }
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
 
     let b2cTotal = 0;
     let b2cCount = 0;
-    
+
     let faysalKhi = 0, faysalKhiCount = 0;
     let faysalIsb = 0, faysalIsbCount = 0;
     let faysalLhe = 0, faysalLheCount = 0;
@@ -85,10 +85,10 @@ export async function GET(req: NextRequest) {
     let cashLhe = 0, cashLheCount = 0;
     let cashOther = 0, cashOtherCount = 0;
 
-    let d2cCash = 0;
-    let ecommerceCash = 0;
-    let gymsCash = 0;
-    let retailCash = 0;
+    let d2cCash = 0, d2cCount = 0;
+    let ecommerceCash = 0, ecommerceCount = 0;
+    let gymsCash = 0, gymsCount = 0;
+    let retailCash = 0, retailCount = 0;
 
     for (const p of payments) {
       if (!p.journal_id) continue;
@@ -103,12 +103,16 @@ export async function GET(req: NextRequest) {
 
       if (isB2C(p) || cName === 'Web') {
         d2cCash += amt;
+        d2cCount++;
       } else if (cName === 'Online Market Place') {
         ecommerceCash += amt;
+        ecommerceCount++;
       } else if (cName === 'GYM') {
         gymsCash += amt;
+        gymsCount++;
       } else {
         retailCash += amt;
+        retailCount++;
       }
 
       if (isB2C(p)) {
@@ -124,7 +128,7 @@ export async function GET(req: NextRequest) {
         else if (city === 'Lahore') { faysalLhe += amt; faysalLheCount++; }
         else if (city === 'Karachi') { faysalKhi += amt; faysalKhiCount++; }
         else { faysalOther += amt; faysalOtherCount++; }
-      } 
+      }
       else if (jId === 16) { // Dubai Islamic
         if (city === 'Islamabad') { dubaiIsb += amt; dubaiIsbCount++; }
         else if (city === 'Lahore') { dubaiLhe += amt; dubaiLheCount++; }
@@ -162,11 +166,19 @@ export async function GET(req: NextRequest) {
       { name: 'Other Channels', amount: cashOther, count: cashOtherCount },
     ];
 
+    const channelSources: CashSource[] = [
+      { name: 'D2C — Shopify / Web', amount: d2cCash, count: d2cCount },
+      { name: 'Ecommerce — Pandamart / Kravemart', amount: ecommerceCash, count: ecommerceCount },
+      { name: 'Gyms — Health', amount: gymsCash, count: gymsCount },
+      { name: 'Retail — Physical / Other', amount: retailCash, count: retailCount },
+    ];
+
     const total = sources.reduce((acc, s) => acc + s.amount, 0);
 
-    return NextResponse.json({ 
-      total, 
+    return NextResponse.json({
+      total,
       sources,
+      channelSources,
       channelTargetsData: {
         d2c: d2cCash,
         ecommerce: ecommerceCash,

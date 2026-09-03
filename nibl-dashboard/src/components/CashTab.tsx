@@ -48,7 +48,21 @@ export default function CashTab({ data, dateRange }: Props) {
       </div>
       <div className={styles.grid} style={{ marginTop: '1.5rem' }}>
         <div className={styles.leftCol}>
-          <CashChart sources={cash.sources} total={cash.total} />
+          <CashChart 
+            sources={cash.channelSources} 
+            total={cash.total} 
+            title="Cash Collection by Channel" 
+            subtitle="Daily cash generation grouped by sales channels" 
+            hideCitySummary={true} 
+          />
+          <div style={{ marginTop: '24px' }}>
+            <CashChart 
+              sources={cash.sources} 
+              total={cash.total} 
+              title="Cash Collection by Account" 
+              subtitle="Daily cash generation by bank & city" 
+            />
+          </div>
         </div>
         <div className={styles.rightCol}>
           <ReceivablesTable customers={invoices.outstandingCustomers} />
