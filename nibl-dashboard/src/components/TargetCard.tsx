@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
-import { Target } from 'lucide-react';
 import styles from './TargetCard.module.css';
 
 interface TargetCardProps {
@@ -12,122 +11,105 @@ interface TargetCardProps {
   storageKey: string;
 }
 
+function fmtK(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K`;
+  return new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(n);
+}
+
 function fmt(n: number) {
-  return new Intl.NumberFormat('en-PK', { style: 'decimal', maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(n);
 }
 
 export default function TargetCard({ title, actual, dateRange, storageKey }: TargetCardProps) {
-  const [monthlyTargetStr, setMonthlyTargetStr] = useState<string>('');
+  const [monthlyTargetStr, setMonthlyTargetStr] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      setMonthlyTargetStr(saved);
-    }
+    if (saved) setMonthlyTargetStr(saved);
   }, [storageKey]);
 
-  const handleTargetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // only allow numbers
-    const val = e.target.value.replace(/[^0-9]/g, '');
+  const handleTargetChange = (raw: string) => {
+    const val = raw.replace(/[^0-9]/g, '');
     setMonthlyTargetStr(val);
     localStorage.setItem(storageKey, val);
   };
 
   const monthlyTarget = parseInt(monthlyTargetStr, 10) || 0;
   const dailyTarget = Math.round(monthlyTarget / 30);
-  const weeklyTarget = dailyTarget * 7;
 
-  // Calculate period target based on selected date range
   let daysInPeriod = 0;
   if (dateRange) {
-    const from = parseISO(dateRange.from);
-    const to = parseISO(dateRange.to);
-    // +1 to include both start and end days
-    daysInPeriod = Math.max(1, differenceInDays(to, from) + 1);
+    daysInPeriod = Math.max(1, differenceInDays(parseISO(dateRange.to), parseISO(dateRange.from)) + 1);
   }
 
   const periodTarget = dateRange ? dailyTarget * daysInPeriod : 0;
-  
-  let percentage = 0;
-  if (periodTarget > 0) {
-    percentage = (actual / periodTarget) * 100;
-  }
+  const percentage = periodTarget > 0 ? Math.min((actual / periodTarget) * 100, 999) : 0;
+  const displayPct = periodTarget > 0 ? percentage : 0;
+  const diff = actual - periodTarget;
 
-  // RAG Status calculation
-  let statusClass = '';
-  if (dateRange && periodTarget > 0) {
+  let statusColor = 'var(--muted)';
+  let statusBg = 'var(--surface2)';
+  let statusLabel = '—';
+  let barColor = 'var(--muted)';
+
+  if (periodTarget > 0) {
     if (percentage >= 100) {
-      statusClass = styles.statusGreen;
+      statusColor = 'var(--green)'; statusBg = 'var(--green-light)'; statusLabel = 'On Track'; barColor = 'var(--green)';
     } else if (percentage >= 80) {
-      statusClass = styles.statusYellow;
+      statusColor = 'var(--amber)'; statusBg = 'var(--amber-light)'; statusLabel = 'Near'; barColor = 'var(--amber)';
     } else {
-      statusClass = styles.statusRed;
+      statusColor = 'var(--red)'; statusBg = 'var(--red-light)'; statusLabel = 'Behind'; barColor = 'var(--red)';
     }
   }
 
   return (
     <div className={styles.card}>
-      <div className={styles.header}>
-        <div className={styles.titleArea}>
-          <div className={styles.title}>
-            <Target size={20} className={styles.highlight} />
-            {title} Target Tracking
-          </div>
-          <div className={styles.subtitle}>
-            {dateRange 
-              ? `Tracking performance for selected ${daysInPeriod} day(s)` 
-              : 'Select a date range to view period performance'}
-          </div>
+      <div className={styles.topRow}>
+        <div className={styles.titleGroup}>
+          <div className={styles.title}>{title}</div>
         </div>
-
-        <div className={styles.targetInputWrapper}>
-          <label className={styles.inputLabel}>Monthly Target (PKR)</label>
+        <div className={styles.inputWrapper}>
+          <span className={styles.inputLabel}>Target</span>
           <input
             type="text"
             className={styles.targetInput}
             value={monthlyTargetStr ? fmt(parseInt(monthlyTargetStr, 10)) : ''}
-            onChange={(e) => {
-              // Strip commas for parsing
-              const raw = e.target.value.replace(/,/g, '');
-              const eMock = { target: { value: raw } } as React.ChangeEvent<HTMLInputElement>;
-              handleTargetChange(eMock);
-            }}
-            placeholder="e.g. 100,000"
+            onChange={e => handleTargetChange(e.target.value.replace(/,/g, ''))}
+            placeholder="Monthly"
           />
         </div>
       </div>
 
-      <div className={styles.metricsGrid}>
-        <div className={styles.metricBox}>
-          <div className={styles.metricLabel}>Daily Target</div>
-          <div className={styles.metricValue}>PKR {fmt(dailyTarget)}</div>
-        </div>
-        <div className={styles.metricBox}>
-          <div className={styles.metricLabel}>Weekly Target</div>
-          <div className={styles.metricValue}>PKR {fmt(weeklyTarget)}</div>
-        </div>
-        
-        {dateRange && (
-          <>
-            <div className={styles.metricBox}>
-              <div className={styles.metricLabel}>Period Target ({daysInPeriod} Days)</div>
-              <div className={styles.metricValue}>PKR {fmt(periodTarget)}</div>
+      {periodTarget > 0 ? (
+        <>
+          <div className={styles.mainMetric}>
+            <div className={styles.percentage} style={{ color: statusColor }}>
+              {displayPct.toFixed(0)}%
             </div>
-            
-            <div className={`${styles.metricBox} ${statusClass}`}>
-              <div className={styles.metricLabel}>
-                Actual vs Target
-              </div>
-              <div className={styles.metricValue}>
-                {percentage.toFixed(1)}%
-              </div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '4px', opacity: 0.8 }}>
-                Diff: PKR {fmt(actual - periodTarget)}
-              </div>
+          </div>
+
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} style={{ width: `${Math.min(displayPct, 100)}%`, background: barColor }} />
+          </div>
+
+          <div className={styles.bottomRow}>
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Actual</span>
+              <span className={styles.metaValue}>PKR {fmtK(actual)}</span>
             </div>
-          </>
-        )}
-      </div>
+            <div className={styles.statusBadge} style={{ color: statusColor, background: statusBg }}>
+              {diff >= 0 ? '+' : ''}{fmtK(diff)}
+            </div>
+            <div className={styles.metaItem} style={{ textAlign: 'right' }}>
+              <span className={styles.metaLabel}>Target</span>
+              <span className={styles.metaValue}>PKR {fmtK(periodTarget)}</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className={styles.noTarget}>Set a monthly target to track performance</div>
+      )}
     </div>
   );
 }

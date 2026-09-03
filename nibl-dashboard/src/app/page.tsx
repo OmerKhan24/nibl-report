@@ -18,7 +18,7 @@ import TargetCard from '@/components/TargetCard';
 import ClickUpTab from '@/components/ClickUpTab';
 import { CreditCard, BarChart2, Package, CheckSquare } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
-import { RefreshCw, TrendingUp, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
 
 export type DateRange = { from: string; to: string } | null;
@@ -36,17 +36,17 @@ const PRESETS = [
 ];
 
 export default function DashboardPage() {
-  const [dateRange, setDateRange]   = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
+  const [dateRange, setDateRange] = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
   const [activePreset, setActivePreset] = useState(3);
-  const [activeTab, setActiveTab]       = useState<'sales' | 'cash' | 'inventory' | 'clickup'>('sales');
-  const [sales, setSales]               = useState<SalesApiResponse | null>(null);
-  const [invoices, setInvoices]         = useState<InvoicesApiResponse | null>(null);
-  const [cash, setCash]                 = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'sales' | 'cash' | 'inventory' | 'clickup'>('sales');
+  const [sales, setSales] = useState<SalesApiResponse | null>(null);
+  const [invoices, setInvoices] = useState<InvoicesApiResponse | null>(null);
+  const [cash, setCash] = useState<any>(null);
   const [inventoryData, setInventoryData] = useState<any>(null);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated]   = useState<Date | null>(null);
-  const [isOnline, setIsOnline]     = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildQuery = useCallback((range: DateRange) => {
@@ -65,7 +65,7 @@ export default function DashboardPage() {
       const q = buildQuery(range);
       const cb = Date.now();
       const qStr = q ? `${q}&_cb=${cb}` : `?_cb=${cb}`;
-      
+
       // Fetch sequentially to prevent Odoo XML-RPC 503 Rate Limits
       const salesRes = await fetch(`/api/sales${qStr}`);
       if (!salesRes.ok) throw new Error(`Sales API Error: ${salesRes.status} ${await salesRes.text()}`);
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       if (!inventoryRes.ok) throw new Error(`Inventory API Error: ${inventoryRes.status} ${await inventoryRes.text()}`);
       const inventoryJson = await inventoryRes.json();
       if (inventoryJson.error) throw new Error(inventoryJson.error);
-      
+
       setSales(salesData);
       setInvoices(invData);
       setCash(cashData);
@@ -127,7 +127,7 @@ export default function DashboardPage() {
   const handleRefresh = () => fetchData(dateRange);
 
   const now = new Date();
-  const nowStr = format(now, 'EEEE, dd MMMM yyyy');
+  const nowStr = format(now, 'dd MMM yyyy');
   const timeStr = format(now, 'hh:mm a');
 
   return (
@@ -135,23 +135,21 @@ export default function DashboardPage() {
       {/* ── Header ── */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logo}>
-            <TrendingUp size={24} strokeWidth={2.5} />
-          </div>
-          <div>
-            <h1 className={styles.title}>NIBL Foods</h1>
-            <p className={styles.subtitle}>COO Sales Performance Dashboard</p>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://niblfoods.com/cdn/shop/files/ChatGPT_Image_Jul_4_2026_08_40_24_AM.png"
+            alt="NIBL Foods"
+            className={styles.logo}
+          />
+          <div className={styles.headerDivider} />
+          <p className={styles.subtitle}>COO Sales Performance Dashboard</p>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.dateTime}>
-            <span className={styles.dateStr}>{nowStr}</span>
-            <span className={styles.timeStr}>{timeStr}</span>
-          </div>
+          <div className={styles.dateTime}>{nowStr} · {timeStr}</div>
           <div className={styles.statusRow}>
             {isOnline
-              ? <span className={styles.online}><Wifi size={13}/> Live</span>
-              : <span className={styles.offline}><WifiOff size={13}/> Offline</span>
+              ? <span className={styles.online}><Wifi size={13} /> Live</span>
+              : <span className={styles.offline}><WifiOff size={13} /> Offline</span>
             }
             {lastUpdated && (
               <span className={styles.updated}>
@@ -166,49 +164,51 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* ── Filters ── */}
-      <div className={styles.filterBar}>
+      {/* ── Tab Bar ── */}
+      <div className={styles.tabBar}>
         <div className={styles.tabs}>
-          <button 
+          <button
             className={`${styles.tabBtn} ${activeTab === 'sales' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('sales')}
           >
-            <BarChart2 size={16} /> Sales Overview
+            <BarChart2 size={15} /> Sales Overview
           </button>
-          <button 
+          <button
             className={`${styles.tabBtn} ${activeTab === 'cash' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('cash')}
           >
-            <CreditCard size={16} /> Cash & Receivables
+            <CreditCard size={15} /> Cash & Receivables
           </button>
-          <button 
+          <button
             className={`${styles.tabBtn} ${activeTab === 'inventory' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('inventory')}
           >
-            <Package size={16} /> Inventory DOH
+            <Package size={15} /> Inventory DOH
           </button>
-          <button 
+          <button
             className={`${styles.tabBtn} ${activeTab === 'clickup' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('clickup')}
           >
-            <CheckSquare size={16} /> ClickUp Actions
+            <CheckSquare size={15} /> ClickUp Actions
           </button>
         </div>
+      </div>
 
-        <div className={styles.filterRight}>
-          <div className={styles.presets}>
-            {PRESETS.map((p, i) => (
-              <button
-                key={p.label}
-                className={`${styles.presetBtn} ${activePreset === i ? styles.presetActive : ''}`}
-                onClick={() => handlePreset(i)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <DateFilter value={dateRange} onChange={handleCustomRange} />
+      {/* ── Date Filter Bar ── */}
+      <div className={styles.dateBar}>
+        <div className={styles.presets}>
+          {PRESETS.map((p, i) => (
+            <button
+              key={p.label}
+              className={`${styles.presetBtn} ${activePreset === i ? styles.presetActive : ''}`}
+              onClick={() => handlePreset(i)}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
+        <div className={styles.dateSep} />
+        <DateFilter value={dateRange} onChange={handleCustomRange} />
       </div>
 
       {/* ── Error ── */}
@@ -232,40 +232,38 @@ export default function DashboardPage() {
             {activeTab === 'sales' ? (
               <>
                 <div className={styles.targetsGrid}>
-                  <TargetCard 
-                    title="Overall Sales" 
-                    actual={sales.total.revenue} 
-                    dateRange={dateRange} 
-                    storageKey="nibl_sales_target" 
+                  <TargetCard
+                    title="Overall Sales"
+                    actual={sales.total.revenue}
+                    dateRange={dateRange}
+                    storageKey="nibl_sales_target"
                   />
-                  <TargetCard 
-                    title="D2C Sales" 
-                    actual={sales.channelTargetsData.d2c.revenue} 
-                    dateRange={dateRange} 
-                    storageKey="nibl_d2c_target" 
+                  <TargetCard
+                    title="D2C Sales"
+                    actual={sales.channelTargetsData.d2c.revenue}
+                    dateRange={dateRange}
+                    storageKey="nibl_d2c_target"
                   />
-                  <TargetCard 
-                    title="Ecommerce Sales" 
-                    actual={sales.channelTargetsData.ecommerce.revenue} 
-                    dateRange={dateRange} 
-                    storageKey="nibl_ecommerce_target" 
+                  <TargetCard
+                    title="Ecommerce Sales"
+                    actual={sales.channelTargetsData.ecommerce.revenue}
+                    dateRange={dateRange}
+                    storageKey="nibl_ecommerce_target"
                   />
-                  <TargetCard 
-                    title="Gyms Sales" 
-                    actual={sales.channelTargetsData.gyms.revenue} 
-                    dateRange={dateRange} 
-                    storageKey="nibl_gyms_target" 
+                  <TargetCard
+                    title="Gyms Sales"
+                    actual={sales.channelTargetsData.gyms.revenue}
+                    dateRange={dateRange}
+                    storageKey="nibl_gyms_target"
                   />
-                  <TargetCard 
-                    title="Retail/Physical Sales" 
-                    actual={sales.channelTargetsData.retail.revenue} 
-                    dateRange={dateRange} 
-                    storageKey="nibl_retail_target" 
+                  <TargetCard
+                    title="Retail/Physical Sales"
+                    actual={sales.channelTargetsData.retail.revenue}
+                    dateRange={dateRange}
+                    storageKey="nibl_retail_target"
                   />
                 </div>
-                <div style={{ marginTop: '1.5rem' }}>
-                  <KpiRow sales={sales} invoices={invoices} />
-                </div>
+                <KpiRow sales={sales} invoices={invoices} />
                 <ChannelCards sales={sales} />
                 <div className={styles.tablesRow}>
                   <TopTable

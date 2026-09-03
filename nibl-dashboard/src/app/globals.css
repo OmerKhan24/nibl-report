@@ -3,33 +3,37 @@
 :root {
   --font-inter: 'Inter', sans-serif;
 
-  /* Core palette — white/light for LED TV */
-  --bg:        #f0f4f8;
-  --surface:   #ffffff;
-  --surface2:  #f8fafc;
-  --border:    #e2e8f0;
+  /* Backgrounds */
+  --bg:       #f1f4f8;
+  --surface:  #ffffff;
+  --surface2: #f8fafc;
+  --surface3: #f1f5f9;
+
+  /* Borders */
+  --border:        #e2e8f0;
   --border-strong: #cbd5e1;
 
   /* Text */
-  --text:      #0f172a;
-  --text-2:    #334155;
-  --muted:     #64748b;
-  --muted-2:   #94a3b8;
+  --text:    #0f172a;
+  --text-2:  #334155;
+  --muted:   #64748b;
+  --muted-2: #94a3b8;
 
-  /* Brand accents */
-  --b2c:       #0ea5e9;   /* sky blue — Shopify B2C */
+  /* Brand */
+  --b2c:       #0ea5e9;
   --b2c-light: #e0f2fe;
-  --b2b:       #7c3aed;   /* violet — B2B direct */
+  --b2b:       #7c3aed;
   --b2b-light: #ede9fe;
 
-  --green:     #059669;
-  --green-light: #d1fae5;
-  --amber:     #d97706;
+  /* Semantic */
+  --green:       #059669;
+  --green-light: #dcfce7;
+  --amber:       #d97706;
   --amber-light: #fef3c7;
-  --red:       #dc2626;
-  --red-light: #fee2e2;
-  --blue:      #2563eb;
-  --blue-light: #dbeafe;
+  --red:         #dc2626;
+  --red-light:   #fee2e2;
+  --blue:        #2563eb;
+  --blue-light:  #dbeafe;
 }
 
 html { scroll-behavior: smooth; }
@@ -38,17 +42,17 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 
-/* Utilities */
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;

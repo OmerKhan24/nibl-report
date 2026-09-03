@@ -20,19 +20,23 @@ export async function GET(req: NextRequest) {
     // Step 1: Collect unique partner IDs
     const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => (p.partner_id as [number, string])[0]))];
 
-    // Step 2: Fetch city from res.partner
-    interface OdooPartner { id: number; name: string; city: string | false; }
+    // Step 2: Fetch city and channel from res.partner
+    interface OdooPartner { id: number; name: string; city: string | false; x_studio_channel?: [number, string] | false; }
     const partnerRecords = partnerIds.length > 0
       ? await odooQuery<OdooPartner[]>(
           'res.partner', 'search_read',
           [[['id', 'in', partnerIds]]],
-          { fields: ['id', 'name', 'city'], limit: 5000 }
+          { fields: ['id', 'name', 'city', 'x_studio_channel'], limit: 5000 }
         )
       : [];
 
     const partnerCityMap = new Map<number, string | false>();
+    const partnerChannelMap = new Map<number, string>();
     for (const p of partnerRecords) {
       partnerCityMap.set(p.id, p.city);
+      if (p.x_studio_channel && Array.isArray(p.x_studio_channel)) {
+        partnerChannelMap.set(p.id, p.x_studio_channel[1]);
+      }
     }
 
     // Helper functions
@@ -81,10 +85,31 @@ export async function GET(req: NextRequest) {
     let cashLhe = 0, cashLheCount = 0;
     let cashOther = 0, cashOtherCount = 0;
 
+    let d2cCash = 0;
+    let ecommerceCash = 0;
+    let gymsCash = 0;
+    let retailCash = 0;
+
     for (const p of payments) {
       if (!p.journal_id) continue;
       const jId = p.journal_id[0];
       const amt = p.amount;
+
+      // Channel categorization for targets
+      let cName = 'Other';
+      if (p.partner_id) {
+        cName = partnerChannelMap.get(p.partner_id[0]) || 'Other';
+      }
+
+      if (isB2C(p) || cName === 'Web') {
+        d2cCash += amt;
+      } else if (cName === 'Online Market Place') {
+        ecommerceCash += amt;
+      } else if (cName === 'GYM') {
+        gymsCash += amt;
+      } else {
+        retailCash += amt;
+      }
 
       if (isB2C(p)) {
         b2cTotal += amt;
@@ -139,7 +164,16 @@ export async function GET(req: NextRequest) {
 
     const total = sources.reduce((acc, s) => acc + s.amount, 0);
 
-    return NextResponse.json({ total, sources } as CashApiResponse, {
+    return NextResponse.json({ 
+      total, 
+      sources,
+      channelTargetsData: {
+        d2c: d2cCash,
+        ecommerce: ecommerceCash,
+        gyms: gymsCash,
+        retail: retailCash
+      }
+    } as any, {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error: any) {

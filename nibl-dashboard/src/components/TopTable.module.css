@@ -1,72 +1,75 @@
 .card {
   background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  border-top: 4px solid var(--accent);
+  position: relative;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border-strong); }
+
+.accentLine {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 22px;
+  padding: 14px 16px 12px;
   border-bottom: 1px solid var(--border);
 }
 
-.titleGroup {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.titleGroup { flex: 1; min-width: 0; }
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.1px;
+}
+
+.subtitle {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 1px;
 }
 
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .sortSelect {
-  padding: 4px 8px;
-  font-size: 11px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
+  padding: 3px 7px;
+  font-size: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
   background: var(--surface2);
-  color: var(--text);
+  color: var(--text-2);
   outline: none;
   cursor: pointer;
   font-weight: 600;
-}
-.sortSelect:hover {
-  border-color: var(--muted);
-}
-
-.icon { font-size: 22px; }
-
-.title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.subtitle {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
+  font-family: inherit;
 }
 
 .badge {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   background: var(--accent-light);
   color: var(--accent);
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 20px;
+  white-space: nowrap;
 }
 
 .tableWrap {
-  max-height: 400px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -79,16 +82,18 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 10px 16px;
-  font-size: 11px;
+  padding: 8px 10px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   background: var(--surface2);
   text-align: left;
+  border-bottom: 1px solid var(--border);
 }
 .thNum { text-align: right; }
+.thRank { width: 28px; padding-left: 14px; }
 
 .row {
   border-bottom: 1px solid var(--border);
@@ -98,67 +103,68 @@
 .row:hover { background: var(--surface2); }
 
 .rank {
-  padding: 12px 10px 12px 18px;
-  font-size: 12px;
+  padding: 9px 6px 9px 14px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--muted);
-  width: 32px;
+  color: var(--muted-2);
+  width: 28px;
+  font-variant-numeric: tabular-nums;
 }
 
 .name {
-  padding: 12px 16px;
+  padding: 9px 10px;
   min-width: 0;
 }
 
 .nameText {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
-  margin-bottom: 5px;
+  max-width: 160px;
+  margin-bottom: 4px;
 }
 
 .barWrap {
-  height: 5px;
-  background: var(--surface2);
-  border-radius: 3px;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
   overflow: hidden;
-  border: 1px solid var(--border);
 }
 
 .barFill {
   height: 100%;
   background: var(--accent);
-  border-radius: 3px;
-  transition: width 0.6s ease;
-  opacity: 0.8;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+  opacity: 0.7;
 }
 
 .num {
-  padding: 12px 16px;
+  padding: 9px 12px;
   text-align: right;
-  font-size: 13px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--text-2);
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .pill {
   display: inline-block;
   background: var(--accent-light);
   color: var(--accent);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .empty {
   text-align: center;
-  padding: 40px;
+  padding: 32px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
 }

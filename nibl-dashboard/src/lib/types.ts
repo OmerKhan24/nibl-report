@@ -140,6 +140,12 @@ export interface CashSource {
 export interface CashApiResponse {
   total: number;
   sources: CashSource[];
+  channelTargetsData: {
+    d2c: number;
+    ecommerce: number;
+    gyms: number;
+    retail: number;
+  };
 }
 
 export interface OutstandingCustomer {

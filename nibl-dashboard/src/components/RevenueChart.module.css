@@ -1,9 +1,8 @@
 .card {
   background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
 }
 
 .header {
@@ -14,24 +13,25 @@
 }
 
 .title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.1px;
 }
 
 .subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .tooltip {
-  background: white;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
   font-family: 'Inter', sans-serif;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .tooltipTitle {
