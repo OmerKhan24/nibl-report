@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
-import type { Payment, CashSource, CashApiResponse } from '@/lib/types';
+import type { CashSource } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+interface CashEntry {
+  amount: number;
+  partner_id: [number, string] | false;
+  journal_id: [number, string] | false;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,52 +16,82 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
 
-    const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', 'in', ['posted', 'paid', 'reconciled']], ['company_id', '=', 1]];
-    if (from) domain.push(['date', '>=', from]);
-    if (to) domain.push(['date', '<=', to]);
+    // ── Source 1: Registered payments (PBNK / PCSH entries via payment wizard) ──────
+    const payDomain: unknown[] = [
+      ['payment_type', '=', 'inbound'],
+      ['state', 'in', ['posted', 'paid', 'reconciled']],
+      ['company_id', '=', 1],
+    ];
+    if (from) payDomain.push(['date', '>=', from]);
+    if (to) payDomain.push(['date', '<=', to]);
 
-    const fields = ['name', 'amount', 'date', 'partner_id', 'journal_id', 'payment_type'];
-    const payments = await odooQuery<Payment[]>('account.payment', 'search_read', [domain], { fields, limit: 5000 });
+    const payments = await odooQuery<{ amount: number; partner_id: [number, string] | false; journal_id: [number, string] | false }[]>(
+      'account.payment', 'search_read',
+      [payDomain],
+      { fields: ['amount', 'partner_id', 'journal_id'], limit: 5000 }
+    );
 
-    // Fetch manual MISC payments from the ledger where the move name contains "Payment"
+    // ── Source 2: MISC journal entries (ISB Daily Sales, KHI Daily Sales, manual cash) ──
+    // Captures credit entries on Receivable account that are NOT linked to account.payment.
+    // payment_id = false prevents double-counting entries already in source 1.
     const miscDomain: unknown[] = [
-      ['account_id.code', '=', '1121001'], // Receivable from Customers
+      ['account_id.code', '=', '1121001'], // 1121001 Receivable from Customers
       ['credit', '>', 0],
       ['parent_state', '=', 'posted'],
-      ['journal_id.type', '=', 'general'],
-      ['move_id.name', 'ilike', 'Payment']
+      ['company_id', '=', 1],
+      ['payment_id', '=', false],
     ];
     if (from) miscDomain.push(['date', '>=', from]);
     if (to) miscDomain.push(['date', '<=', to]);
 
-    const miscLines = await odooQuery<any[]>('account.move.line', 'search_read', [miscDomain], { 
-      fields: ['credit', 'date', 'partner_id', 'move_id'], 
-      limit: 1000 
-    });
+    let miscEntries: CashEntry[] = [];
+    try {
+      const miscLines = await odooQuery<{ id: number; credit: number; partner_id: [number, string] | false; journal_id: [number, string] | false; move_id: [number, string] }[]>(
+        'account.move.line', 'search_read',
+        [miscDomain],
+        { fields: ['credit', 'partner_id', 'journal_id', 'move_id'], limit: 5000 }
+      );
 
-    const manualPayments: Payment[] = miscLines.map(line => ({
-      id: line.id + 1000000, // ensure unique ID
-      name: line.move_id ? line.move_id[1] : 'Manual Payment',
-      amount: line.credit,
-      date: line.date,
-      partner_id: line.partner_id,
-      journal_id: [10, 'Miscellaneous Operations'], // Fixed to MISC so it goes to fallback
-      payment_type: 'inbound'
-    }));
+      if (miscLines.length > 0) {
+        // Exclude reversal moves and moves that have been reversed to avoid counting cancelled payments.
+        // A reversal move has reversed_entry_id set (pointing to the original it reverses).
+        const moveIds = [...new Set(miscLines.map(l => l.move_id[0]))];
+        const moves = await odooQuery<{ id: number; reversed_entry_id: [number, string] | false }[]>(
+          'account.move', 'search_read',
+          [[['id', 'in', moveIds]]],
+          { fields: ['id', 'reversed_entry_id'], limit: moveIds.length + 100 }
+        );
 
-    payments.push(...manualPayments);
+        const excludeIds = new Set<number>();
+        for (const m of moves) {
+          if (m.reversed_entry_id) {
+            excludeIds.add(m.id);                      // this move IS a reversal
+            excludeIds.add(m.reversed_entry_id[0]);    // the original that was reversed
+          }
+        }
 
-    // Step 1: Collect unique partner IDs
-    const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => (p.partner_id as [number, string])[0]))];
+        miscEntries = miscLines
+          .filter(l => !excludeIds.has(l.move_id[0]))
+          .map(l => ({ amount: l.credit, partner_id: l.partner_id, journal_id: l.journal_id }));
+      }
+    } catch (e) {
+      console.warn('[payments] MISC query failed, falling back to account.payment only:', e);
+    }
 
-    // Step 2: Fetch city and channel from res.partner
-    interface OdooPartner { id: number; name: string; city: string | false; x_studio_channel?: [number, string] | false; }
+    // ── Combine both sources ──────────────────────────────────────────────────────────
+    const allEntries: CashEntry[] = [
+      ...payments.map(p => ({ amount: p.amount, partner_id: p.partner_id, journal_id: p.journal_id })),
+      ...miscEntries,
+    ];
+
+    // ── Partner lookup: city and channel ─────────────────────────────────────────────
+    const partnerIds = [...new Set(allEntries.filter(e => e.partner_id).map(e => (e.partner_id as [number, string])[0]))];
+    interface OdooPartner { id: number; city: string | false; x_studio_channel?: [number, string] | false }
     const partnerRecords = partnerIds.length > 0
-      ? await odooQuery<OdooPartner[]>(
-        'res.partner', 'search_read',
-        [[['id', 'in', partnerIds]]],
-        { fields: ['id', 'name', 'city', 'x_studio_channel'], limit: 5000 }
-      )
+      ? await odooQuery<OdooPartner[]>('res.partner', 'search_read',
+          [[['id', 'in', partnerIds]]],
+          { fields: ['id', 'city', 'x_studio_channel'], limit: 5000 }
+        )
       : [];
 
     const partnerCityMap = new Map<number, string | false>();
@@ -67,115 +103,84 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Helper functions
-    function isB2C(payment: Payment): boolean {
-      const partnerName = (payment.partner_id ? payment.partner_id[1] : '').toLowerCase();
-      if (partnerName.includes('trax') || partnerName.includes('payfast') || partnerName.includes('pay fast') || partnerName.includes('postex') || partnerName.includes('shopify')) {
-        return true;
-      }
-      return false;
+    function isB2C(e: CashEntry): boolean {
+      const name = (e.partner_id ? e.partner_id[1] : '').toLowerCase();
+      return name.includes('trax') || name.includes('payfast') || name.includes('pay fast') || name.includes('postex') || name.includes('shopify');
     }
 
-    function getCityCategory(payment: Payment): string {
-      const partnerName = payment.partner_id ? payment.partner_id[1] : '';
-      const partnerId = payment.partner_id ? (payment.partner_id as [number, string])[0] : 0;
-      const odooCity = partnerCityMap.get(partnerId) || '';
+    function getCityCategory(e: CashEntry): string {
+      const partnerName = e.partner_id ? e.partner_id[1] : '';
+      const partnerId = e.partner_id ? (e.partner_id as [number, string])[0] : 0;
+      const odooCity = (partnerCityMap.get(partnerId) || '') as string;
 
       const cityUpper = odooCity.toUpperCase();
       if (cityUpper.includes('KARACHI') || cityUpper.includes('KHI')) return 'Karachi';
       if (cityUpper.includes('ISLAMABAD') || cityUpper.includes('ISB')) return 'Islamabad';
       if (cityUpper.includes('LAHORE') || cityUpper.includes('LHE')) return 'Lahore';
 
-      const combinedStr = `${partnerName} ${odooCity}`.toUpperCase();
-
-      if (combinedStr.includes('ISB') || combinedStr.includes('ISLAMABAD') || combinedStr.includes('ISL') || combinedStr.includes('G-10') || combinedStr.includes('F-7') || combinedStr.includes('BLUE AREA') || combinedStr.includes('JINNAH SUPER') || combinedStr.includes('F-11') || combinedStr.includes('G-9') || combinedStr.includes('G-15')) {
-        return 'Islamabad';
-      }
-      if (combinedStr.includes('LHE') || combinedStr.includes('LAHORE') || combinedStr.includes('GULBERG') || combinedStr.includes('JOHAR TOWN') || combinedStr.includes('MODEL TOWN') || combinedStr.includes('DEFENCE LHE')) {
-        return 'Lahore';
-      }
-      if (combinedStr.includes('KHI') || combinedStr.includes('KARACHI') || combinedStr.includes('DHA') || combinedStr.includes('CLIFTON') || combinedStr.includes('GULSHAN') || combinedStr.includes('TARIQ ROAD') || combinedStr.includes('BAHADURABAD')) {
-        return 'Karachi';
-      }
-      return 'Other'; // Fallback
+      const combined = `${partnerName} ${odooCity}`.toUpperCase();
+      if (combined.includes('ISB') || combined.includes('ISLAMABAD') || combined.includes('ISL') || combined.includes('G-10') || combined.includes('F-7') || combined.includes('BLUE AREA') || combined.includes('JINNAH SUPER') || combined.includes('F-11') || combined.includes('G-9') || combined.includes('G-15')) return 'Islamabad';
+      if (combined.includes('LHE') || combined.includes('LAHORE') || combined.includes('GULBERG') || combined.includes('JOHAR TOWN') || combined.includes('MODEL TOWN') || combined.includes('DEFENCE LHE')) return 'Lahore';
+      if (combined.includes('KHI') || combined.includes('KARACHI') || combined.includes('DHA') || combined.includes('CLIFTON') || combined.includes('GULSHAN') || combined.includes('TARIQ ROAD') || combined.includes('BAHADURABAD')) return 'Karachi';
+      return 'Other';
     }
 
-    let b2cTotal = 0;
-    let b2cCount = 0;
-
+    // ── Accumulate by category ────────────────────────────────────────────────────────
+    let b2cTotal = 0, b2cCount = 0;
     let faysalKhi = 0, faysalKhiCount = 0;
     let faysalIsb = 0, faysalIsbCount = 0;
     let faysalLhe = 0, faysalLheCount = 0;
     let faysalOther = 0, faysalOtherCount = 0;
-
     let dubaiKhi = 0, dubaiKhiCount = 0;
     let dubaiIsb = 0, dubaiIsbCount = 0;
     let dubaiLhe = 0, dubaiLheCount = 0;
     let dubaiOther = 0, dubaiOtherCount = 0;
-
     let cashKhi = 0, cashKhiCount = 0;
     let cashIsb = 0, cashIsbCount = 0;
     let cashLhe = 0, cashLheCount = 0;
     let cashOther = 0, cashOtherCount = 0;
-
     let d2cCash = 0, d2cCount = 0;
     let ecommerceCash = 0, ecommerceCount = 0;
     let gymsCash = 0, gymsCount = 0;
     let retailCash = 0, retailCount = 0;
 
-    for (const p of payments) {
-      if (!p.journal_id) continue;
-      const jId = p.journal_id[0];
-      const amt = p.amount;
+    for (const entry of allEntries) {
+      const jId = entry.journal_id ? entry.journal_id[0] : 0;
+      const amt = entry.amount;
 
-      // Channel categorization for targets
-      let cName = 'Other';
-      if (p.partner_id) {
-        cName = partnerChannelMap.get(p.partner_id[0]) || 'Other';
+      // Channel bucket
+      const cName = entry.partner_id ? (partnerChannelMap.get((entry.partner_id as [number, string])[0]) || 'Other') : 'Other';
+      if (isB2C(entry) || cName === 'Web') { d2cCash += amt; d2cCount++; }
+      else if (cName === 'Online Market Place') { ecommerceCash += amt; ecommerceCount++; }
+      else if (cName === 'GYM') { gymsCash += amt; gymsCount++; }
+      else { retailCash += amt; retailCount++; }
+
+      // Bank/cash bucket
+      if (isB2C(entry)) {
+        b2cTotal += amt; b2cCount++;
+        continue;
       }
 
-      if (isB2C(p) || cName === 'Web') {
-        d2cCash += amt;
-        d2cCount++;
-      } else if (cName === 'Online Market Place') {
-        ecommerceCash += amt;
-        ecommerceCount++;
-      } else if (cName === 'GYM') {
-        gymsCash += amt;
-        gymsCount++;
-      } else {
-        retailCash += amt;
-        retailCount++;
-      }
-
-      if (isB2C(p)) {
-        b2cTotal += amt;
-        b2cCount++;
-        continue; // B2C payments are isolated from KHI/ISB bank split
-      }
-
-      const city = getCityCategory(p);
+      const city = getCityCategory(entry);
 
       if (jId === 19) { // Faysal Bank
         if (city === 'Islamabad') { faysalIsb += amt; faysalIsbCount++; }
         else if (city === 'Lahore') { faysalLhe += amt; faysalLheCount++; }
         else if (city === 'Karachi') { faysalKhi += amt; faysalKhiCount++; }
         else { faysalOther += amt; faysalOtherCount++; }
-      }
-      else if (jId === 16) { // Dubai Islamic
+      } else if (jId === 16) { // Dubai Islamic
         if (city === 'Islamabad') { dubaiIsb += amt; dubaiIsbCount++; }
         else if (city === 'Lahore') { dubaiLhe += amt; dubaiLheCount++; }
         else if (city === 'Karachi') { dubaiKhi += amt; dubaiKhiCount++; }
         else { dubaiOther += amt; dubaiOtherCount++; }
-      }
-      else if (jId === 17) { // KHI Cash
+      } else if (jId === 17) { // KHI Cash in Hand
         cashKhi += amt; cashKhiCount++;
-      }
-      else if (jId === 18) { // ISB Cash
+      } else if (jId === 18) { // ISB Cash in Hand
         cashIsb += amt; cashIsbCount++;
-      }
-      else if (p.payment_type === 'inbound') {
-        // Fallback for any other cash/bank journals
+      } else {
+        // Other journals (MISC, etc.) — route by city detection
+        // "ISB Daily Sales" partner name → Islamabad → cashIsb
+        // "KHI Daily Sales" partner name → Karachi → cashKhi
         if (city === 'Lahore') { cashLhe += amt; cashLheCount++; }
         else if (city === 'Islamabad') { cashIsb += amt; cashIsbCount++; }
         else if (city === 'Karachi') { cashKhi += amt; cashKhiCount++; }
@@ -212,15 +217,8 @@ export async function GET(req: NextRequest) {
       total,
       sources,
       channelSources,
-      channelTargetsData: {
-        d2c: d2cCash,
-        ecommerce: ecommerceCash,
-        gyms: gymsCash,
-        retail: retailCash
-      }
-    } as any, {
-      headers: { 'Cache-Control': 'no-store' },
-    });
+      channelTargetsData: { d2c: d2cCash, ecommerce: ecommerceCash, gyms: gymsCash, retail: retailCash },
+    } as any, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('Payments API error:', error);
     return new NextResponse(error.message || 'Internal Server Error', { status: 500 });
