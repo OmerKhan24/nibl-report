@@ -8,6 +8,7 @@ interface CashEntry {
   amount: number;
   partner_id: [number, string] | false;
   journal_id: [number, string] | false;
+  move_name?: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -84,15 +85,13 @@ export async function GET(req: NextRequest) {
           excludeIds.add(r.reversed_entry_id[0]); // the original that was reversed
         }
 
-        // Filter 2: only keep moves that have a debit on a cash/bank account.
-        // This separates genuine cash receipts (Dr Cash / Cr Receivable) from
-        // non-cash credits like sales returns or discounts (Dr Sales / Cr Receivable).
+        // Only keep moves that have a debit on a cash/bank account.
         const cashDebitLines = await odooQuery<{ move_id: [number, string] }[]>(
           'account.move.line', 'search_read',
           [[
             ['move_id', 'in', moveIds],
             ['debit', '>', 0],
-            ['account_id.account_type', 'in', ['asset_cash', 'liquidity']], // bank & cash (Odoo 16 / 14-15)
+            ['account_id.account_type', 'in', ['asset_cash', 'liquidity']],
           ]],
           { fields: ['move_id'], limit: 5000 }
         );
@@ -100,7 +99,7 @@ export async function GET(req: NextRequest) {
 
         miscEntries = miscLines
           .filter(l => !excludeIds.has(l.move_id[0]) && movesWithCashDebit.has(l.move_id[0]))
-          .map(l => ({ amount: l.credit, partner_id: l.partner_id, journal_id: l.journal_id }));
+          .map(l => ({ amount: l.credit, partner_id: l.partner_id, journal_id: l.journal_id, move_name: l.move_id ? l.move_id[1] : '' }));
       }
     } catch (e) {
       console.warn('[payments] MISC query failed, falling back to account.payment only:', e);
@@ -133,7 +132,9 @@ export async function GET(req: NextRequest) {
 
     function isB2C(e: CashEntry): boolean {
       const name = (e.partner_id ? e.partner_id[1] : '').toLowerCase();
-      return name.includes('trax') || name.includes('payfast') || name.includes('pay fast') || name.includes('postex') || name.includes('shopify');
+      const moveName = (e.move_name || '').toLowerCase();
+      return name.includes('trax') || name.includes('payfast') || name.includes('pay fast') || name.includes('postex') || name.includes('shopify')
+        || moveName.includes('daily sales') || name.includes('daily sales');
     }
 
     function getCityCategory(e: CashEntry): string {
