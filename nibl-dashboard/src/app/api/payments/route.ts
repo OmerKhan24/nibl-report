@@ -53,16 +53,21 @@ export async function GET(req: NextRequest) {
       const partnerId = payment.partner_id ? (payment.partner_id as [number, string])[0] : 0;
       const odooCity = partnerCityMap.get(partnerId) || '';
 
+      const cityUpper = odooCity.toUpperCase();
+      if (cityUpper.includes('KARACHI') || cityUpper.includes('KHI')) return 'Karachi';
+      if (cityUpper.includes('ISLAMABAD') || cityUpper.includes('ISB')) return 'Islamabad';
+      if (cityUpper.includes('LAHORE') || cityUpper.includes('LHE')) return 'Lahore';
+
       const combinedStr = `${partnerName} ${odooCity}`.toUpperCase();
 
-      if (combinedStr.includes('KHI') || combinedStr.includes('KARACHI') || combinedStr.includes('DHA') || combinedStr.includes('CLIFTON') || combinedStr.includes('GULSHAN') || combinedStr.includes('TARIQ ROAD') || combinedStr.includes('BAHADURABAD')) {
-        return 'Karachi';
-      }
       if (combinedStr.includes('ISB') || combinedStr.includes('ISLAMABAD') || combinedStr.includes('ISL') || combinedStr.includes('G-10') || combinedStr.includes('F-7') || combinedStr.includes('BLUE AREA') || combinedStr.includes('JINNAH SUPER') || combinedStr.includes('F-11') || combinedStr.includes('G-9') || combinedStr.includes('G-15')) {
         return 'Islamabad';
       }
       if (combinedStr.includes('LHE') || combinedStr.includes('LAHORE') || combinedStr.includes('GULBERG') || combinedStr.includes('JOHAR TOWN') || combinedStr.includes('MODEL TOWN') || combinedStr.includes('DEFENCE LHE')) {
         return 'Lahore';
+      }
+      if (combinedStr.includes('KHI') || combinedStr.includes('KARACHI') || combinedStr.includes('DHA') || combinedStr.includes('CLIFTON') || combinedStr.includes('GULSHAN') || combinedStr.includes('TARIQ ROAD') || combinedStr.includes('BAHADURABAD')) {
+        return 'Karachi';
       }
       return 'Other'; // Fallback
     }
