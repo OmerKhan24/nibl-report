@@ -17,6 +17,34 @@ export async function GET(req: NextRequest) {
     const fields = ['name', 'amount', 'date', 'partner_id', 'journal_id', 'payment_type'];
     const payments = await odooQuery<Payment[]>('account.payment', 'search_read', [domain], { fields, limit: 5000 });
 
+    // Fetch manual MISC payments from the ledger where the move name contains "Payment"
+    const miscDomain: unknown[] = [
+      ['account_id.code', '=', '1121001'], // Receivable from Customers
+      ['credit', '>', 0],
+      ['parent_state', '=', 'posted'],
+      ['journal_id.type', '=', 'general'],
+      ['move_id.name', 'ilike', 'Payment']
+    ];
+    if (from) miscDomain.push(['date', '>=', from]);
+    if (to) miscDomain.push(['date', '<=', to]);
+
+    const miscLines = await odooQuery<any[]>('account.move.line', 'search_read', [miscDomain], { 
+      fields: ['credit', 'date', 'partner_id', 'move_id'], 
+      limit: 1000 
+    });
+
+    const manualPayments: Payment[] = miscLines.map(line => ({
+      id: line.id + 1000000, // ensure unique ID
+      name: line.move_id ? line.move_id[1] : 'Manual Payment',
+      amount: line.credit,
+      date: line.date,
+      partner_id: line.partner_id,
+      journal_id: [10, 'Miscellaneous Operations'], // Fixed to MISC so it goes to fallback
+      payment_type: 'inbound'
+    }));
+
+    payments.push(...manualPayments);
+
     // Step 1: Collect unique partner IDs
     const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => (p.partner_id as [number, string])[0]))];
 
