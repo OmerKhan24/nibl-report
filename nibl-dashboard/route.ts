@@ -1,0 +1,232 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { odooQuery } from '@/lib/odoo';
+import type { Payment, CashSource, CashApiResponse } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+
+    const domain: unknown[] = [['payment_type', '=', 'inbound'], ['state', 'in', ['posted', 'paid', 'reconciled']], ['company_id', '=', 1]];
+    if (from) domain.push(['date', '>=', from]);
+    if (to) domain.push(['date', '<=', to]);
+
+    const fields = ['name', 'amount', 'date', 'partner_id', 'journal_id', 'payment_type'];
+    const payments = await odooQuery<Payment[]>('account.payment', 'search_read', [domain], { fields, limit: 5000 });
+
+    // Fetch manual MISC payments from the ledger where the move name contains "Payment"
+    const miscDomain: unknown[] = [
+      ['account_id.code', '=', '1121001'], // Receivable from Customers
+      ['credit', '>', 0],
+      ['parent_state', '=', 'posted'],
+      ['journal_id.type', '=', 'general']
+    ];
+    if (from) miscDomain.push(['date', '>=', from]);
+    if (to) miscDomain.push(['date', '<=', to]);
+
+    const miscLines = await odooQuery<any[]>('account.move.line', 'search_read', [miscDomain], { 
+      fields: ['credit', 'date', 'partner_id', 'move_id'], 
+      limit: 1000 
+    });
+
+    const manualPayments: Payment[] = miscLines
+      .filter(line => {
+        const moveName = line.move_id ? line.move_id[1] : '';
+        return moveName.toLowerCase().includes('payment');
+      })
+      .map(line => ({
+        id: line.id + 1000000, // ensure unique ID
+        name: line.move_id ? line.move_id[1] : 'Manual Payment',
+        amount: line.credit,
+        date: line.date,
+        partner_id: line.partner_id,
+        journal_id: [10, 'Miscellaneous Operations'], // Fixed to MISC so it goes to fallback
+        payment_type: 'inbound'
+      }));
+
+    payments.push(...manualPayments);
+
+    // Step 1: Collect unique partner IDs
+    const partnerIds = [...new Set(payments.filter(p => p.partner_id).map(p => (p.partner_id as [number, string])[0]))];
+
+    // Step 2: Fetch city and channel from res.partner
+    interface OdooPartner { id: number; name: string; city: string | false; x_studio_channel?: [number, string] | false; }
+    const partnerRecords = partnerIds.length > 0
+      ? await odooQuery<OdooPartner[]>(
+        'res.partner', 'search_read',
+        [[['id', 'in', partnerIds]]],
+        { fields: ['id', 'name', 'city', 'x_studio_channel'], limit: 5000 }
+      )
+      : [];
+
+    const partnerCityMap = new Map<number, string | false>();
+    const partnerChannelMap = new Map<number, string>();
+    for (const p of partnerRecords) {
+      partnerCityMap.set(p.id, p.city);
+      if (p.x_studio_channel && Array.isArray(p.x_studio_channel)) {
+        partnerChannelMap.set(p.id, p.x_studio_channel[1]);
+      }
+    }
+
+    // Helper functions
+    function isB2C(payment: Payment): boolean {
+      const partnerName = (payment.partner_id ? payment.partner_id[1] : '').toLowerCase();
+      if (partnerName.includes('trax') || partnerName.includes('payfast') || partnerName.includes('pay fast') || partnerName.includes('postex') || partnerName.includes('shopify')) {
+        return true;
+      }
+      return false;
+    }
+
+    function getCityCategory(payment: Payment): string {
+      const partnerName = payment.partner_id ? payment.partner_id[1] : '';
+      const partnerId = payment.partner_id ? (payment.partner_id as [number, string])[0] : 0;
+      const odooCity = partnerCityMap.get(partnerId) || '';
+
+      const cityUpper = odooCity.toUpperCase();
+      if (cityUpper.includes('KARACHI') || cityUpper.includes('KHI')) return 'Karachi';
+      if (cityUpper.includes('ISLAMABAD') || cityUpper.includes('ISB')) return 'Islamabad';
+      if (cityUpper.includes('LAHORE') || cityUpper.includes('LHE')) return 'Lahore';
+
+      const combinedStr = `${partnerName} ${odooCity}`.toUpperCase();
+
+      if (combinedStr.includes('ISB') || combinedStr.includes('ISLAMABAD') || combinedStr.includes('ISL') || combinedStr.includes('G-10') || combinedStr.includes('F-7') || combinedStr.includes('BLUE AREA') || combinedStr.includes('JINNAH SUPER') || combinedStr.includes('F-11') || combinedStr.includes('G-9') || combinedStr.includes('G-15')) {
+        return 'Islamabad';
+      }
+      if (combinedStr.includes('LHE') || combinedStr.includes('LAHORE') || combinedStr.includes('GULBERG') || combinedStr.includes('JOHAR TOWN') || combinedStr.includes('MODEL TOWN') || combinedStr.includes('DEFENCE LHE')) {
+        return 'Lahore';
+      }
+      if (combinedStr.includes('KHI') || combinedStr.includes('KARACHI') || combinedStr.includes('DHA') || combinedStr.includes('CLIFTON') || combinedStr.includes('GULSHAN') || combinedStr.includes('TARIQ ROAD') || combinedStr.includes('BAHADURABAD')) {
+        return 'Karachi';
+      }
+      return 'Other'; // Fallback
+    }
+
+    let b2cTotal = 0;
+    let b2cCount = 0;
+
+    let faysalKhi = 0, faysalKhiCount = 0;
+    let faysalIsb = 0, faysalIsbCount = 0;
+    let faysalLhe = 0, faysalLheCount = 0;
+    let faysalOther = 0, faysalOtherCount = 0;
+
+    let dubaiKhi = 0, dubaiKhiCount = 0;
+    let dubaiIsb = 0, dubaiIsbCount = 0;
+    let dubaiLhe = 0, dubaiLheCount = 0;
+    let dubaiOther = 0, dubaiOtherCount = 0;
+
+    let cashKhi = 0, cashKhiCount = 0;
+    let cashIsb = 0, cashIsbCount = 0;
+    let cashLhe = 0, cashLheCount = 0;
+    let cashOther = 0, cashOtherCount = 0;
+
+    let d2cCash = 0, d2cCount = 0;
+    let ecommerceCash = 0, ecommerceCount = 0;
+    let gymsCash = 0, gymsCount = 0;
+    let retailCash = 0, retailCount = 0;
+
+    for (const p of payments) {
+      if (!p.journal_id) continue;
+      const jId = p.journal_id[0];
+      const amt = p.amount;
+
+      // Channel categorization for targets
+      let cName = 'Other';
+      if (p.partner_id) {
+        cName = partnerChannelMap.get(p.partner_id[0]) || 'Other';
+      }
+
+      if (isB2C(p) || cName === 'Web') {
+        d2cCash += amt;
+        d2cCount++;
+      } else if (cName === 'Online Market Place') {
+        ecommerceCash += amt;
+        ecommerceCount++;
+      } else if (cName === 'GYM') {
+        gymsCash += amt;
+        gymsCount++;
+      } else {
+        retailCash += amt;
+        retailCount++;
+      }
+
+      if (isB2C(p)) {
+        b2cTotal += amt;
+        b2cCount++;
+        continue; // B2C payments are isolated from KHI/ISB bank split
+      }
+
+      const city = getCityCategory(p);
+
+      if (jId === 19) { // Faysal Bank
+        if (city === 'Islamabad') { faysalIsb += amt; faysalIsbCount++; }
+        else if (city === 'Lahore') { faysalLhe += amt; faysalLheCount++; }
+        else if (city === 'Karachi') { faysalKhi += amt; faysalKhiCount++; }
+        else { faysalOther += amt; faysalOtherCount++; }
+      }
+      else if (jId === 16) { // Dubai Islamic
+        if (city === 'Islamabad') { dubaiIsb += amt; dubaiIsbCount++; }
+        else if (city === 'Lahore') { dubaiLhe += amt; dubaiLheCount++; }
+        else if (city === 'Karachi') { dubaiKhi += amt; dubaiKhiCount++; }
+        else { dubaiOther += amt; dubaiOtherCount++; }
+      }
+      else if (jId === 17) { // KHI Cash
+        cashKhi += amt; cashKhiCount++;
+      }
+      else if (jId === 18) { // ISB Cash
+        cashIsb += amt; cashIsbCount++;
+      }
+      else if (p.payment_type === 'inbound') {
+        // Fallback for any other cash/bank journals
+        if (city === 'Lahore') { cashLhe += amt; cashLheCount++; }
+        else if (city === 'Islamabad') { cashIsb += amt; cashIsbCount++; }
+        else if (city === 'Karachi') { cashKhi += amt; cashKhiCount++; }
+        else { cashOther += amt; cashOtherCount++; }
+      }
+    }
+
+    const sources: CashSource[] = [
+      { name: 'B2C (Shopify/Trax/Postex)', amount: b2cTotal, count: b2cCount },
+      { name: 'Faysal Bank (KHI)', amount: faysalKhi, count: faysalKhiCount },
+      { name: 'Faysal Bank (ISB)', amount: faysalIsb, count: faysalIsbCount },
+      { name: 'Faysal Bank (LHE)', amount: faysalLhe, count: faysalLheCount },
+      { name: 'Faysal Bank (Other)', amount: faysalOther, count: faysalOtherCount },
+      { name: 'Dubai Islamic (KHI)', amount: dubaiKhi, count: dubaiKhiCount },
+      { name: 'Dubai Islamic (ISB)', amount: dubaiIsb, count: dubaiIsbCount },
+      { name: 'Dubai Islamic (LHE)', amount: dubaiLhe, count: dubaiLheCount },
+      { name: 'Dubai Islamic (Other)', amount: dubaiOther, count: dubaiOtherCount },
+      { name: 'Cash in Hand (KHI)', amount: cashKhi, count: cashKhiCount },
+      { name: 'Cash in Hand (ISB)', amount: cashIsb, count: cashIsbCount },
+      { name: 'Cash in Hand (LHE)', amount: cashLhe, count: cashLheCount },
+      { name: 'Other Channels', amount: cashOther, count: cashOtherCount },
+    ];
+
+    const channelSources: CashSource[] = [
+      { name: 'D2C — Shopify / Web', amount: d2cCash, count: d2cCount },
+      { name: 'Ecommerce — Pandamart / Kravemart', amount: ecommerceCash, count: ecommerceCount },
+      { name: 'Gyms — Health', amount: gymsCash, count: gymsCount },
+      { name: 'Retail — Physical / Other', amount: retailCash, count: retailCount },
+    ];
+
+    const total = sources.reduce((acc, s) => acc + s.amount, 0);
+
+    return NextResponse.json({
+      total,
+      sources,
+      channelSources,
+      channelTargetsData: {
+        d2c: d2cCash,
+        ecommerce: ecommerceCash,
+        gyms: gymsCash,
+        retail: retailCash
+      }
+    } as any, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
+  } catch (error: any) {
+    console.error('Payments API error:', error);
+    return new NextResponse(error.message || 'Internal Server Error', { status: 500 });
+  }
+}
