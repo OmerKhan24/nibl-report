@@ -70,8 +70,22 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        // Filter 2: only keep moves that have a debit on a cash/bank account.
+        // This separates genuine cash receipts (Dr Cash / Cr Receivable) from
+        // non-cash credits like sales returns or discounts (Dr Sales / Cr Receivable).
+        const cashDebitLines = await odooQuery<{ move_id: [number, string] }[]>(
+          'account.move.line', 'search_read',
+          [[
+            ['move_id', 'in', moveIds],
+            ['debit', '>', 0],
+            ['account_id.account_type', 'in', ['asset_cash', 'liquidity']], // bank & cash (Odoo 16 / 14-15)
+          ]],
+          { fields: ['move_id'], limit: 5000 }
+        );
+        const movesWithCashDebit = new Set(cashDebitLines.map(l => l.move_id[0]));
+
         miscEntries = miscLines
-          .filter(l => !excludeIds.has(l.move_id[0]))
+          .filter(l => !excludeIds.has(l.move_id[0]) && movesWithCashDebit.has(l.move_id[0]))
           .map(l => ({ amount: l.credit, partner_id: l.partner_id, journal_id: l.journal_id }));
       }
     } catch (e) {
