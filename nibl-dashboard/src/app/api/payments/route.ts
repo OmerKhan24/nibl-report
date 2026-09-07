@@ -62,12 +62,26 @@ export async function GET(req: NextRequest) {
           { fields: ['id', 'reversed_entry_id'], limit: moveIds.length + 100 }
         );
 
+        // reversed_entry_id is set on the REVERSAL move, not the original.
+        // Since reversal moves have debit entries they won't appear in miscLines,
+        // so we must search the OTHER direction: find moves whose reversed_entry_id
+        // points at one of our move IDs, then exclude both.
         const excludeIds = new Set<number>();
         for (const m of moves) {
           if (m.reversed_entry_id) {
-            excludeIds.add(m.id);                      // this move IS a reversal
-            excludeIds.add(m.reversed_entry_id[0]);    // the original that was reversed
+            // m itself is a reversal (shouldn't be in miscLines but exclude to be safe)
+            excludeIds.add(m.id);
+            excludeIds.add(m.reversed_entry_id[0]);
           }
+        }
+        // Also find any move (not in our list) that reverses one of our moves
+        const reversalsOfOurs = await odooQuery<{ id: number; reversed_entry_id: [number, string] }[]>(
+          'account.move', 'search_read',
+          [[['reversed_entry_id', 'in', moveIds]]],
+          { fields: ['id', 'reversed_entry_id'], limit: 1000 }
+        );
+        for (const r of reversalsOfOurs) {
+          excludeIds.add(r.reversed_entry_id[0]); // the original that was reversed
         }
 
         // Filter 2: only keep moves that have a debit on a cash/bank account.
