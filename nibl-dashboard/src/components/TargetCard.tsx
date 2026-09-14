@@ -44,9 +44,13 @@ export default function TargetCard({ title, actual, dateRange, storageKey }: Tar
   }
 
   const periodTarget = dateRange ? dailyTarget * daysInPeriod : 0;
-  const percentage = periodTarget > 0 ? Math.min((actual / periodTarget) * 100, 999) : 0;
-  const displayPct = periodTarget > 0 ? percentage : 0;
+  
+  const actualPctOfMonthly = monthlyTarget > 0 ? (actual / monthlyTarget) * 100 : 0;
+  const expectedPctOfMonthly = monthlyTarget > 0 ? (periodTarget / monthlyTarget) * 100 : 0;
+  const pctDiff = actualPctOfMonthly - expectedPctOfMonthly;
   const diff = actual - periodTarget;
+
+  const pacingPercentage = periodTarget > 0 ? (actual / periodTarget) * 100 : 0;
 
   let statusColor = 'var(--muted)';
   let statusBg = 'var(--surface2)';
@@ -54,9 +58,9 @@ export default function TargetCard({ title, actual, dateRange, storageKey }: Tar
   let barColor = 'var(--muted)';
 
   if (periodTarget > 0) {
-    if (percentage >= 100) {
+    if (pacingPercentage >= 100) {
       statusColor = 'var(--green)'; statusBg = 'var(--green-light)'; statusLabel = 'On Track'; barColor = 'var(--green)';
-    } else if (percentage >= 80) {
+    } else if (pacingPercentage >= 80) {
       statusColor = 'var(--amber)'; statusBg = 'var(--amber-light)'; statusLabel = 'Near'; barColor = 'var(--amber)';
     } else {
       statusColor = 'var(--red)'; statusBg = 'var(--red-light)'; statusLabel = 'Behind'; barColor = 'var(--red)';
@@ -84,25 +88,41 @@ export default function TargetCard({ title, actual, dateRange, storageKey }: Tar
       {periodTarget > 0 ? (
         <>
           <div className={styles.mainMetric}>
-            <div className={styles.percentage} style={{ color: statusColor }}>
-              {displayPct.toFixed(0)}%
+            <div className={styles.percentage} style={{ color: statusColor, display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              {actualPctOfMonthly.toFixed(1)}% <span style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 'normal' }}>of month</span>
             </div>
           </div>
 
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${Math.min(displayPct, 100)}%`, background: barColor }} />
+          <div className={styles.progressBar} style={{ position: 'relative' }}>
+            <div className={styles.progressFill} style={{ width: `${Math.min(actualPctOfMonthly, 100)}%`, background: barColor }} />
+            {expectedPctOfMonthly > 0 && expectedPctOfMonthly <= 100 && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  bottom: '-4px',
+                  left: `${expectedPctOfMonthly}%`,
+                  width: '2px',
+                  background: 'var(--text-main)',
+                  zIndex: 2,
+                  boxShadow: '0 0 2px rgba(0,0,0,0.5)'
+                }}
+                title={`Expected: ${expectedPctOfMonthly.toFixed(1)}%`}
+              />
+            )}
           </div>
 
           <div className={styles.bottomRow}>
             <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Actual</span>
+              <span className={styles.metaLabel}>Actual ({actualPctOfMonthly.toFixed(1)}%)</span>
               <span className={styles.metaValue}>PKR {fmtK(actual)}</span>
             </div>
-            <div className={styles.statusBadge} style={{ color: statusColor, background: statusBg }}>
-              {diff >= 0 ? '+' : ''}{fmtK(diff)}
+            <div className={styles.statusBadge} style={{ color: statusColor, background: statusBg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 10px', gap: '2px', lineHeight: '1.2' }}>
+              <div style={{ fontWeight: 600 }}>{diff >= 0 ? '+' : ''}{fmtK(diff)}</div>
+              <div style={{ fontSize: '0.85em', opacity: 0.85 }}>{pctDiff >= 0 ? '+' : ''}{pctDiff.toFixed(1)}%</div>
             </div>
             <div className={styles.metaItem} style={{ textAlign: 'right' }}>
-              <span className={styles.metaLabel}>Target</span>
+              <span className={styles.metaLabel}>Expected ({expectedPctOfMonthly.toFixed(1)}%)</span>
               <span className={styles.metaValue}>PKR {fmtK(periodTarget)}</span>
             </div>
           </div>
