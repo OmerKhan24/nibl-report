@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     // If the user selected a 'to' date, we shouldn't fetch lines created after that date.
     if (to) agedDomain.push(['date', '<=', to]);
 
-    const allAgedLines = await odooQuery<{partner_id: [number, string] | false, amount_residual: number, date_maturity: string | false, date: string}>('account.move.line', 'search_read',
+    const allAgedLines = await odooQuery<{partner_id: [number, string] | false, amount_residual: number, date_maturity: string | false, date: string}[]>('account.move.line', 'search_read',
       [agedDomain],
       {
         fields: ['partner_id', 'amount_residual', 'date_maturity', 'date'],
