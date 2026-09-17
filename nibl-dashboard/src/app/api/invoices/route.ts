@@ -85,30 +85,40 @@ export async function GET(req: NextRequest) {
     // Fetch 90+ days outstanding invoices separately (ignores the 'from' date filter)
     const now = Date.now();
     const MS_PER_DAY = 1000 * 60 * 60 * 24;
-    const ninetyDaysAgo = new Date(now - 90 * MS_PER_DAY).toISOString().split('T')[0];
-
     const agedDomain: unknown[] = [
       ['parent_state', '=', 'posted'], 
       ['company_id', '=', 1],
       ['account_type', '=', 'asset_receivable'],
-      ['date_maturity', '<=', ninetyDaysAgo],
       ['amount_residual', '!=', 0]
     ];
     
     // If the user selected a 'to' date, we shouldn't fetch lines created after that date.
     if (to) agedDomain.push(['date', '<=', to]);
 
-    const agedLines = await odooQuery<{partner_id: [number, string] | false, amount_residual: number}[]>('account.move.line', 'search_read',
+    const allAgedLines = await odooQuery<{partner_id: [number, string] | false, amount_residual: number, date_maturity: string | false, date: string}>('account.move.line', 'search_read',
       [agedDomain],
       {
-        fields: ['partner_id', 'amount_residual'],
+        fields: ['partner_id', 'amount_residual', 'date_maturity', 'date'],
         limit: 10000,
       }
     );
 
+    const now = Date.now();
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
     const outMap = new Map<number, import('@/lib/types').OutstandingCustomer>();
-    agedLines.forEach(line => {
+    allAgedLines.forEach(line => {
       if (!line.partner_id) return;
+      
+      const targetDateStr = line.date_maturity || line.date;
+      if (!targetDateStr) return;
+      
+      const targetDate = new Date(targetDateStr).getTime();
+      const diffDays = (now - targetDate) / MS_PER_DAY;
+      
+      // Only include lines that are 90+ days overdue
+      if (diffDays < 90) return;
+
       const pid = line.partner_id[0];
       const pname = line.partner_id[1];
       const residual = line.amount_residual || 0;
