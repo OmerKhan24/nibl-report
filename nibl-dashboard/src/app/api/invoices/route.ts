@@ -82,19 +82,32 @@ export async function GET(req: NextRequest) {
       ? ((paidAmount + partialAmount * 0.5) / totalAmount) * 100
       : 0;
 
-    // Build Outstanding Customers List from the already-fetched invoices (respects the user's date filter)
+    // Fetch 90+ days outstanding invoices separately (ignores the 'from' date filter)
     const now = Date.now();
     const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const ninetyDaysAgo = new Date(now - 90 * MS_PER_DAY).toISOString().split('T')[0];
 
-    const outstandingInvoices = [...notPaidInvs, ...partialInvs].filter(inv => {
-      if (!inv.invoice_date) return false;
-      const invDate = new Date(inv.invoice_date).getTime();
-      const diffDays = (now - invDate) / MS_PER_DAY;
-      return diffDays >= 90;
-    });
+    const agedDomain: unknown[] = [
+      ['move_type', '=', 'out_invoice'], 
+      ['state', '=', 'posted'], 
+      ['company_id', '=', 1],
+      ['payment_state', 'in', ['not_paid', 'partial']],
+      ['invoice_date', '<=', ninetyDaysAgo]
+    ];
+    
+    // If the user selected a 'to' date, we shouldn't fetch invoices created after that date.
+    if (to) agedDomain.push(['invoice_date', '<=', to]);
+
+    const agedInvoices = await odooQuery<Invoice[]>('account.move', 'search_read',
+      [agedDomain],
+      {
+        fields: ['name', 'partner_id', 'amount_total', 'amount_residual'],
+        limit: 5000,
+      }
+    );
 
     const outMap = new Map<number, import('@/lib/types').OutstandingCustomer>();
-    outstandingInvoices.forEach(inv => {
+    agedInvoices.forEach(inv => {
       if (!inv.partner_id) return;
       const pid = inv.partner_id[0];
       const pname = inv.partner_id[1];
