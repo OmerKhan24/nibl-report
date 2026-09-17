@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
       ['state', '=', 'posted'], 
       ['company_id', '=', 1],
       ['payment_state', 'in', ['not_paid', 'partial']],
-      ['invoice_date', '<=', ninetyDaysAgo]
+      ['invoice_date_due', '<=', ninetyDaysAgo]
     ];
     
     // If the user selected a 'to' date, we shouldn't fetch invoices created after that date.
