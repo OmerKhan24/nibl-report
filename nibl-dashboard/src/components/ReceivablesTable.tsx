@@ -15,7 +15,7 @@ export default function ReceivablesTable({ customers }: Props) {
           <p className={styles.subtitle}>Top outstanding balances</p>
         </div>
         <div className={styles.empty}>
-          All caught up! No outstanding balances from the last 90 days.
+          All caught up! No outstanding balances over 90 days old.
         </div>
       </div>
     );
@@ -28,7 +28,7 @@ export default function ReceivablesTable({ customers }: Props) {
           <h2 className={styles.title}>Accounts Receivable (90 Days)</h2>
           <span className={styles.badge}>{customers.length} Customers</span>
         </div>
-        <p className={styles.subtitle}>Outstanding balances from the last 90 days</p>
+        <p className={styles.subtitle}>Outstanding balances older than 90 days</p>
       </div>
 
       <div className={styles.tableWrap}>
