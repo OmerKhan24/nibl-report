@@ -82,27 +82,16 @@ export async function GET(req: NextRequest) {
       ? ((paidAmount + partialAmount * 0.5) / totalAmount) * 100
       : 0;
 
-    // Build Outstanding Customers List (90 Days)
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
+    // Build Outstanding Customers List from the already-fetched invoices (respects the user's date filter)
+    const now = Date.now();
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-    const outstandingDomain: unknown[] = [
-      ['move_type', '=', 'out_invoice'],
-      ['state', '=', 'posted'],
-      ['company_id', '=', 1],
-      ['payment_state', 'in', ['not_paid', 'partial']],
-      ['invoice_date', '>=', ninetyDaysAgoStr]
-    ];
-
-    const outstandingInvoices = await odooQuery<Invoice[]>('account.move', 'search_read',
-      [outstandingDomain],
-      {
-        fields: ['partner_id', 'amount_total', 'amount_residual'],
-        limit: 5000,
-        order: 'invoice_date desc',
-      }
-    );
+    const outstandingInvoices = [...notPaidInvs, ...partialInvs].filter(inv => {
+      if (!inv.invoice_date) return false;
+      const invDate = new Date(inv.invoice_date).getTime();
+      const diffDays = (now - invDate) / MS_PER_DAY;
+      return diffDays >= 90;
+    });
 
     const outMap = new Map<number, import('@/lib/types').OutstandingCustomer>();
     outstandingInvoices.forEach(inv => {
