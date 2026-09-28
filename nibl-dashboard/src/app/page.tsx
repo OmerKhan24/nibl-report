@@ -262,6 +262,12 @@ export default function DashboardPage() {
                     dateRange={dateRange}
                     storageKey="nibl_retail_target"
                   />
+                  <TargetCard
+                    title="Institutions Sales"
+                    actual={sales.channelTargetsData.institutions?.revenue || 0}
+                    dateRange={dateRange}
+                    storageKey="nibl_institutions_target"
+                  />
                 </div>
                 <KpiRow sales={sales} invoices={invoices} />
                 <ChannelCards sales={sales} />
