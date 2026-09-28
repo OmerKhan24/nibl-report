@@ -172,6 +172,7 @@ export async function GET(req: NextRequest) {
     let ecommerceCash = 0, ecommerceCount = 0;
     let gymsCash = 0, gymsCount = 0;
     let retailCash = 0, retailCount = 0;
+    let institutionsCash = 0, institutionsCount = 0;
 
     for (const entry of allEntries) {
       const jId = entry.journal_id ? entry.journal_id[0] : 0;
@@ -182,6 +183,7 @@ export async function GET(req: NextRequest) {
       if (isB2C(entry) || cName === 'Web') { d2cCash += amt; d2cCount++; }
       else if (cName === 'Online Market Place') { ecommerceCash += amt; ecommerceCount++; }
       else if (cName === 'GYM') { gymsCash += amt; gymsCount++; }
+      else if (['Cafe', 'School', 'University', 'University/Hospital'].includes(cName)) { institutionsCash += amt; institutionsCount++; }
       else { retailCash += amt; retailCount++; }
 
       // Bank/cash bucket
@@ -237,6 +239,7 @@ export async function GET(req: NextRequest) {
       { name: 'D2C — Shopify / Web', amount: d2cCash, count: d2cCount },
       { name: 'Ecommerce — Pandamart / Kravemart', amount: ecommerceCash, count: ecommerceCount },
       { name: 'Gyms — Health', amount: gymsCash, count: gymsCount },
+      { name: 'Institutions — Cafe/School/Uni', amount: institutionsCash, count: institutionsCount },
       { name: 'Retail — Physical / Other', amount: retailCash, count: retailCount },
     ];
 
@@ -246,7 +249,7 @@ export async function GET(req: NextRequest) {
       total,
       sources,
       channelSources,
-      channelTargetsData: { d2c: d2cCash, ecommerce: ecommerceCash, gyms: gymsCash, retail: retailCash },
+      channelTargetsData: { d2c: d2cCash, ecommerce: ecommerceCash, gyms: gymsCash, retail: retailCash, institutions: institutionsCash },
     } as any, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('Payments API error:', error);

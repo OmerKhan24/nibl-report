@@ -45,6 +45,12 @@ export default function CashTab({ data, dateRange }: Props) {
           dateRange={dateRange} 
           storageKey="nibl_cash_retail_target" 
         />
+        <TargetCard 
+          title="Institutions Collection" 
+          actual={cash.channelTargetsData?.institutions || 0} 
+          dateRange={dateRange} 
+          storageKey="nibl_cash_institutions_target" 
+        />
       </div>
       <div className={styles.grid} style={{ marginTop: '1.5rem' }}>
         <div className={styles.leftCol}>

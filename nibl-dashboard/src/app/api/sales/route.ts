@@ -248,10 +248,12 @@ export async function GET(req: NextRequest) {
     let ecommerceRevenue = 0, ecommerceOrders = 0, ecommerceDrafts = 0;
     let gymsRevenue = 0, gymsOrders = 0, gymsDrafts = 0;
     let retailRevenue = 0, retailOrders = 0, retailDrafts = 0;
+    let institutionsRevenue = 0, institutionsOrders = 0, institutionsDrafts = 0;
 
     const ecommerceOrdersList: SaleOrder[] = [];
     const gymsOrdersList: SaleOrder[] = [];
     const retailOrdersList: SaleOrder[] = [];
+    const institutionsOrdersList: SaleOrder[] = [];
 
     for (const o of b2bConfirmed) {
       let cName = 'Other';
@@ -266,6 +268,10 @@ export async function GET(req: NextRequest) {
         gymsRevenue += o.amount_total;
         gymsOrders++;
         gymsOrdersList.push(o);
+      } else if (['Cafe', 'School', 'University', 'University/Hospital'].includes(cName)) {
+        institutionsRevenue += o.amount_total;
+        institutionsOrders++;
+        institutionsOrdersList.push(o);
       } else {
         retailRevenue += o.amount_total;
         retailOrders++;
@@ -282,6 +288,8 @@ export async function GET(req: NextRequest) {
         ecommerceDrafts++;
       } else if (cName === 'GYM') {
         gymsDrafts++;
+      } else if (['Cafe', 'School', 'University', 'University/Hospital'].includes(cName)) {
+        institutionsDrafts++;
       } else {
         retailDrafts++;
       }
@@ -311,6 +319,12 @@ export async function GET(req: NextRequest) {
         revenue: retailRevenue,
         avgOrder: retailOrders ? retailRevenue / retailOrders : 0,
         drafts: retailDrafts,
+      },
+      institutions: {
+        orders: institutionsOrders,
+        revenue: institutionsRevenue,
+        avgOrder: institutionsOrders ? institutionsRevenue / institutionsOrders : 0,
+        drafts: institutionsDrafts,
       }
     };
 
@@ -337,6 +351,7 @@ export async function GET(req: NextRequest) {
       topEcommerceCustomers: topPartners(ecommerceOrdersList, ecommerceRevenue),
       topGymsCustomers: topPartners(gymsOrdersList, gymsRevenue),
       topRetailCustomers: topPartners(retailOrdersList, retailRevenue),
+      topInstitutionsCustomers: topPartners(institutionsOrdersList, institutionsRevenue),
       cityBreakdown,
       channelBreakdown,
       deliveryStatus,

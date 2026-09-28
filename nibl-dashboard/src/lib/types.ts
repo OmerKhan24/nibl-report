@@ -81,6 +81,7 @@ export interface ChannelTargetsData {
   ecommerce: ChannelStats;
   gyms: ChannelStats;
   retail: ChannelStats;
+  institutions: ChannelStats;
 }
 
 export interface SalesApiResponse {
@@ -96,6 +97,7 @@ export interface SalesApiResponse {
   topEcommerceCustomers: PartnerRevenue[];
   topGymsCustomers: PartnerRevenue[];
   topRetailCustomers: PartnerRevenue[];
+  topInstitutionsCustomers: PartnerRevenue[];
   cityBreakdown: CityRevenue[];
   channelBreakdown: ChannelRevenue[];
   deliveryStatus: DeliveryBreakdown;
@@ -146,6 +148,7 @@ export interface CashApiResponse {
     ecommerce: number;
     gyms: number;
     retail: number;
+    institutions: number;
   };
 }
 

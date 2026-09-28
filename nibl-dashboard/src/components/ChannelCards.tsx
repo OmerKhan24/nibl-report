@@ -71,9 +71,10 @@ export default function ChannelCards({ sales }: { sales: SalesApiResponse }) {
   return (
     <div className={styles.grid}>
       <ChannelCard stats={sales.channelTargetsData.d2c}       title="B2C — Shopify"          subtitle="Online · Delivery"    color="#0ea5e9" lightBg="#e0f2fe" pct={pct(sales.channelTargetsData.d2c.revenue)} />
-      <ChannelCard stats={sales.channelTargetsData.retail}    title="Retail — Physical"      subtitle="Trade · Schools"      color="#7c3aed" lightBg="#ede9fe" pct={pct(sales.channelTargetsData.retail.revenue)} />
-      <ChannelCard stats={sales.channelTargetsData.gyms}      title="Gyms — Fitness"         subtitle="Health · Gyms"        color="#7c3aed" lightBg="#ede9fe" pct={pct(sales.channelTargetsData.gyms.revenue)} />
-      <ChannelCard stats={sales.channelTargetsData.ecommerce} title="Ecommerce — Markets"    subtitle="Pandamart · Kravemart" color="#0ea5e9" lightBg="#e0f2fe" pct={pct(sales.channelTargetsData.ecommerce.revenue)} />
+      <ChannelCard stats={sales.channelTargetsData.retail}    title="Retail — Physical"      subtitle="Trade · LMT"          color="#7c3aed" lightBg="#ede9fe" pct={pct(sales.channelTargetsData.retail.revenue)} />
+      <ChannelCard stats={sales.channelTargetsData.institutions} title="Institutions"      subtitle="Cafe · Schools"       color="#f59e0b" lightBg="#fef3c7" pct={pct(sales.channelTargetsData.institutions.revenue)} />
+      <ChannelCard stats={sales.channelTargetsData.gyms}      title="Gyms — Fitness"         subtitle="Health · Gyms"        color="#10b981" lightBg="#d1fae5" pct={pct(sales.channelTargetsData.gyms.revenue)} />
+      <ChannelCard stats={sales.channelTargetsData.ecommerce} title="Ecommerce — Markets"    subtitle="Pandamart · Kravemart" color="#ec4899" lightBg="#fce7f3" pct={pct(sales.channelTargetsData.ecommerce.revenue)} />
     </div>
   );
 }
