@@ -177,6 +177,10 @@ export default function ReportsTab() {
     return parseMarkdownTable(text);
   }
 
+  function stripMd(s: string): string {
+    return s.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').trim();
+  }
+
   function parseMarkdownTable(text: string): { rows: Record<string, unknown>[]; columns: ReportTableColumn[] } | null {
     const lines = text.split('\n');
     let headerIdx = -1;
@@ -192,14 +196,14 @@ export default function ReportsTab() {
 
     if (headerIdx === -1) return null;
 
-    const rawHeaders = lines[headerIdx].split('|').map(h => h.trim()).filter(Boolean);
+    const rawHeaders = lines[headerIdx].split('|').map(h => stripMd(h)).filter(Boolean);
     const dataStart = headerIdx + 2;
     const rows: Record<string, unknown>[] = [];
 
     for (let i = dataStart; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line.startsWith('|')) break;
-      const cells = line.split('|').map(c => c.trim()).filter(Boolean);
+      const cells = line.split('|').map(c => stripMd(c)).filter(c => c !== '');
       if (cells.length === 0) break;
       const row: Record<string, unknown> = {};
       rawHeaders.forEach((h, idx) => {

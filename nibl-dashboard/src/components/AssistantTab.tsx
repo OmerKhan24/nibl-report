@@ -17,6 +17,10 @@ const MODEL_LABELS: Record<string, string> = {
 };
 
 // ── Inline markdown renderer ─────────────────────────────────────────────────
+function stripMd(s: string): string {
+  return s.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').trim();
+}
+
 function renderInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
   return parts.map((part, i) => {
@@ -27,6 +31,7 @@ function renderInline(text: string): React.ReactNode {
 }
 
 function MarkdownContent({ text, isUser }: { text: string; isUser: boolean }) {
+  if (!text) return null;
   if (isUser) return <p className={styles.mdP}>{text}</p>;
 
   const lines = text.split('\n');
@@ -51,12 +56,12 @@ function MarkdownContent({ text, isUser }: { text: string; isUser: boolean }) {
 
     // Markdown table
     if (line.trim().startsWith('|') && i + 1 < lines.length && lines[i + 1].replace(/[\s|:-]/g, '') === '') {
-      const headers = line.split('|').map(h => h.trim()).filter(Boolean);
+      const headers = line.split('|').map(h => stripMd(h)).filter(Boolean);
       const dataStart = i + 2;
       const tableRows: string[][] = [];
       let j = dataStart;
       while (j < lines.length && lines[j].trim().startsWith('|')) {
-        tableRows.push(lines[j].split('|').map(c => c.trim()).filter(Boolean));
+        tableRows.push(lines[j].split('|').map(c => stripMd(c)).filter(Boolean));
         j++;
       }
       elements.push(
@@ -233,7 +238,7 @@ export default function AssistantTab() {
       const botMsg: ChatMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: data.text,
+        content: data.text ?? '(No response)',
         chartSpecs: data.chartSpecs,
         model: data.model,
         costUsd: data.usage?.costUsd,

@@ -234,13 +234,13 @@ export default function DashboardPage() {
 
       {/* ── Content ── */}
       <main className={styles.main}>
-        {activeTab === 'reports' ? (
-          <ReportsTab />
-        ) : activeTab === 'assistant' ? (
-          <AssistantTab />
-        ) : activeTab === 'clickup' ? (
+        {/* Keep AI tabs always mounted so state survives tab switches */}
+        <div style={{ display: activeTab === 'assistant' ? 'block' : 'none' }}><AssistantTab /></div>
+        <div style={{ display: activeTab === 'reports' ? 'block' : 'none' }}><ReportsTab /></div>
+
+        {activeTab === 'clickup' ? (
           <ClickUpTab />
-        ) : loading && !sales ? (
+        ) : activeTab === 'assistant' || activeTab === 'reports' ? null : loading && !sales ? (
           <div className={styles.loadingState}>
             <div className={styles.loadingSpinner} />
             <p>Loading data from Odoo…</p>
