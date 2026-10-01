@@ -16,6 +16,87 @@ const MODEL_LABELS: Record<string, string> = {
   'claude-haiku-4-5-20251001': 'Haiku 4.5 — fast & cheap',
 };
 
+// ── Inline markdown renderer ─────────────────────────────────────────────────
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith('*') && part.endsWith('*')) return <em key={i}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+
+function MarkdownContent({ text, isUser }: { text: string; isUser: boolean }) {
+  if (isUser) return <p className={styles.mdP}>{text}</p>;
+
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    if (line.trimStart().startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      elements.push(<pre key={`code-${i}`} className={styles.mdCode}><code>{codeLines.join('\n')}</code></pre>);
+      i++;
+      continue;
+    }
+
+    // Markdown table
+    if (line.trim().startsWith('|') && i + 1 < lines.length && lines[i + 1].replace(/[\s|:-]/g, '') === '') {
+      const headers = line.split('|').map(h => h.trim()).filter(Boolean);
+      const dataStart = i + 2;
+      const tableRows: string[][] = [];
+      let j = dataStart;
+      while (j < lines.length && lines[j].trim().startsWith('|')) {
+        tableRows.push(lines[j].split('|').map(c => c.trim()).filter(Boolean));
+        j++;
+      }
+      elements.push(
+        <div key={`tbl-${i}`} className={styles.mdTableWrap}>
+          <table className={styles.mdTable}>
+            <thead><tr>{headers.map((h, hi) => <th key={hi}>{renderInline(h)}</th>)}</tr></thead>
+            <tbody>
+              {tableRows.map((cells, ri) => (
+                <tr key={ri}>{headers.map((_, ci) => <td key={ci}>{renderInline(cells[ci] ?? '')}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      i = j;
+      continue;
+    }
+
+    // Skip lone separator lines
+    if (/^\|[-| :]+\|$/.test(line.trim())) { i++; continue; }
+
+    if (line.startsWith('### ')) {
+      elements.push(<h4 key={i} className={styles.mdH3}>{renderInline(line.slice(4))}</h4>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h3 key={i} className={styles.mdH2}>{renderInline(line.slice(3))}</h3>);
+    } else if (line.startsWith('# ')) {
+      elements.push(<h2 key={i} className={styles.mdH1}>{renderInline(line.slice(2))}</h2>);
+    } else if (line === '---' || line === '***') {
+      elements.push(<hr key={i} className={styles.mdHr} />);
+    } else if (line.trim() === '') {
+      // natural spacing
+    } else {
+      elements.push(<p key={i} className={styles.mdP}>{renderInline(line)}</p>);
+    }
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
 function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === 'user';
   return (
@@ -25,7 +106,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       </div>
       <div className={styles.bubbleBody}>
         <div className={styles.bubbleText}>
-          {msg.content.split('\n').map((line, i) => <p key={i}>{line}</p>)}
+          <MarkdownContent text={msg.content} isUser={isUser} />
         </div>
         {msg.chartSpecs?.map((spec, i) => (
           <ChartRenderer key={i} spec={spec as ChartSpec} />

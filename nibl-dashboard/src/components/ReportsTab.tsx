@@ -1,9 +1,60 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Download, ArrowLeft, Send, RefreshCw, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Download, ArrowLeft, Send, RefreshCw, Loader2, Pencil, Check, X } from 'lucide-react';
 import type { SavedReport, ChartSpec, ReportTableColumn } from '@/lib/types';
 import ChartRenderer from './ChartRenderer';
 import styles from './ReportsTab.module.css';
+
+// ── Simple markdown renderer ─────────────────────────────────────────────────
+function MarkdownNarrative({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Skip fenced code blocks
+    if (line.trimStart().startsWith('```')) {
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) i++;
+      i++;
+      continue;
+    }
+
+    // Skip markdown table lines (rendered separately as DataTable)
+    if (line.trim().startsWith('|')) {
+      while (i < lines.length && lines[i].trim().startsWith('|')) i++;
+      continue;
+    }
+
+    if (line.startsWith('### ')) {
+      elements.push(<h4 key={i} className={styles.mdH3}>{renderInline(line.slice(4))}</h4>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h3 key={i} className={styles.mdH2}>{renderInline(line.slice(3))}</h3>);
+    } else if (line.startsWith('# ')) {
+      elements.push(<h2 key={i} className={styles.mdH1}>{renderInline(line.slice(2))}</h2>);
+    } else if (line === '---' || line === '***') {
+      elements.push(<hr key={i} className={styles.mdHr} />);
+    } else if (line.trim() === '') {
+      // blank — natural spacing
+    } else {
+      elements.push(<p key={i} className={styles.mdP}>{renderInline(line)}</p>);
+    }
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith('*') && part.endsWith('*')) return <em key={i}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
 
 // ── Report list card ─────────────────────────────────────────────────────────
 function ReportCard({ report, onOpen, onDelete }: {
@@ -66,11 +117,11 @@ export default function ReportsTab() {
   const [editPrompt, setEditPrompt] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [renamingTitle, setRenamingTitle] = useState('');
+  const [renaming, setRenaming] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  useEffect(() => { fetchReports(); }, []);
 
   async function fetchReports() {
     setLoading(true);
@@ -101,25 +152,73 @@ export default function ReportsTab() {
     return data;
   }
 
-  // Extract table data from agent response text (JSON block if present)
+  // Parse table from JSON block first, then fall back to markdown table
   function parseTableFromText(text: string): { rows: Record<string, unknown>[]; columns: ReportTableColumn[] } | null {
-    const match = text.match(/```json\s*([\s\S]*?)```/);
-    if (!match) return null;
-    try {
-      const parsed = JSON.parse(match[1]);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const keys = Object.keys(parsed[0]);
-        return {
-          rows: parsed,
-          columns: keys.map(k => ({
-            key: k,
-            header: k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            currency: k.toLowerCase().includes('amount') || k.toLowerCase().includes('revenue') || k.toLowerCase().includes('value'),
-          })),
-        };
+    // 1. Try JSON block
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[1]);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const keys = Object.keys(parsed[0]);
+          return {
+            rows: parsed,
+            columns: keys.map(k => ({
+              key: k,
+              header: k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              currency: /amount|revenue|value|price|total|pkr/i.test(k),
+            })),
+          };
+        }
+      } catch { /* not valid JSON */ }
+    }
+
+    // 2. Fall back: parse markdown table
+    return parseMarkdownTable(text);
+  }
+
+  function parseMarkdownTable(text: string): { rows: Record<string, unknown>[]; columns: ReportTableColumn[] } | null {
+    const lines = text.split('\n');
+    let headerIdx = -1;
+
+    for (let i = 0; i < lines.length - 2; i++) {
+      const cur = lines[i].trim();
+      const next = lines[i + 1].trim();
+      if (cur.startsWith('|') && next.replace(/[\s|:-]/g, '') === '') {
+        headerIdx = i;
+        break;
       }
-    } catch { /* not valid JSON */ }
-    return null;
+    }
+
+    if (headerIdx === -1) return null;
+
+    const rawHeaders = lines[headerIdx].split('|').map(h => h.trim()).filter(Boolean);
+    const dataStart = headerIdx + 2;
+    const rows: Record<string, unknown>[] = [];
+
+    for (let i = dataStart; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line.startsWith('|')) break;
+      const cells = line.split('|').map(c => c.trim()).filter(Boolean);
+      if (cells.length === 0) break;
+      const row: Record<string, unknown> = {};
+      rawHeaders.forEach((h, idx) => {
+        const val = (cells[idx] ?? '').replace(/^—$/, '');
+        const num = parseFloat(val.replace(/,/g, ''));
+        row[h] = !isNaN(num) && val !== '' ? num : val;
+      });
+      rows.push(row);
+    }
+
+    if (rows.length === 0) return null;
+
+    const columns: ReportTableColumn[] = rawHeaders.map(h => ({
+      key: h,
+      header: h,
+      currency: /revenue|pkr|amount|value|price|total/i.test(h),
+    }));
+
+    return { rows, columns };
   }
 
   async function handleGenerate() {
@@ -129,7 +228,7 @@ export default function ReportsTab() {
       const data = await generate(prompt);
       const tableResult = parseTableFromText(data.text);
       const report: Omit<SavedReport, 'id' | 'createdAt'> = {
-        title: prompt.slice(0, 60),
+        title: prompt.slice(0, 80),
         query: prompt,
         narrative: data.text,
         tableData: tableResult?.rows ?? [],
@@ -168,16 +267,8 @@ export default function ReportsTab() {
         chartSpecs: data.chartSpecs?.length ? data.chartSpecs : activeReport.chartSpecs,
         model: data.model,
       };
-      await fetch('/api/reports', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: activeReport.id }),
-      });
-      const saveRes = await fetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
+      await fetch('/api/reports', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeReport.id }) });
+      const saveRes = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
       const saved: SavedReport = await saveRes.json();
       setActiveReport(saved);
       setReports(prev => [saved, ...prev.filter(r => r.id !== activeReport.id)]);
@@ -189,6 +280,17 @@ export default function ReportsTab() {
     }
   }
 
+  async function handleRename() {
+    if (!renamingTitle.trim() || !activeReport) return;
+    const updated: SavedReport = { ...activeReport, title: renamingTitle.trim() };
+    await fetch('/api/reports', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeReport.id }) });
+    const saveRes = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
+    const saved: SavedReport = await saveRes.json();
+    setActiveReport(saved);
+    setReports(prev => [saved, ...prev.filter(r => r.id !== activeReport.id)]);
+    setRenaming(false);
+  }
+
   async function handleExport() {
     if (!activeReport) return;
     setExporting(true);
@@ -196,11 +298,7 @@ export default function ReportsTab() {
       const res = await fetch('/api/export/excel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: activeReport.title,
-          rows: activeReport.tableData,
-          columns: activeReport.tableColumns,
-        }),
+        body: JSON.stringify({ title: activeReport.title, rows: activeReport.tableData, columns: activeReport.tableColumns }),
       });
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -215,11 +313,7 @@ export default function ReportsTab() {
   }
 
   async function handleDelete(id: string) {
-    await fetch('/api/reports', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
+    await fetch('/api/reports', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     setReports(prev => prev.filter(r => r.id !== id));
     if (activeReport?.id === id) setActiveReport(null);
   }
@@ -232,7 +326,28 @@ export default function ReportsTab() {
           <button className={styles.backBtn} onClick={() => setActiveReport(null)}>
             <ArrowLeft size={15} /> All Reports
           </button>
-          <h2 className={styles.viewerTitle}>{activeReport.title}</h2>
+
+          {renaming ? (
+            <div className={styles.renameRow}>
+              <input
+                className={styles.renameInput}
+                value={renamingTitle}
+                onChange={e => setRenamingTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setRenaming(false); }}
+                autoFocus
+              />
+              <button className={styles.renameOk} onClick={handleRename} title="Save"><Check size={14} /></button>
+              <button className={styles.renameCancel} onClick={() => setRenaming(false)} title="Cancel"><X size={14} /></button>
+            </div>
+          ) : (
+            <div className={styles.titleRow}>
+              <h2 className={styles.viewerTitle}>{activeReport.title}</h2>
+              <button className={styles.renameBtn} onClick={() => { setRenamingTitle(activeReport.title); setRenaming(true); }} title="Rename">
+                <Pencil size={13} />
+              </button>
+            </div>
+          )}
+
           <div className={styles.viewerActions}>
             <span className={styles.modelBadge}>{activeReport.model.includes('haiku') ? 'Haiku' : 'Sonnet'}</span>
             <button className={styles.exportBtn} onClick={handleExport} disabled={exporting || !activeReport.tableData.length}>
@@ -244,10 +359,7 @@ export default function ReportsTab() {
 
         {/* AI Narrative */}
         <div className={styles.narrative}>
-          {activeReport.narrative.split('\n').map((line, i) => (
-            line.startsWith('```') || line.startsWith('{') ? null :
-            <p key={i}>{line}</p>
-          ))}
+          <MarkdownNarrative text={activeReport.narrative} />
         </div>
 
         {/* Charts */}
@@ -290,16 +402,11 @@ export default function ReportsTab() {
           <p className={styles.listSub}>Generate, save, and refine reports from Odoo data</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.refreshList} onClick={fetchReports} title="Refresh">
-            <RefreshCw size={14} />
-          </button>
-          <button className={styles.newBtn} onClick={() => setShowNew(true)}>
-            <Plus size={15} /> New Report
-          </button>
+          <button className={styles.refreshList} onClick={fetchReports} title="Refresh"><RefreshCw size={14} /></button>
+          <button className={styles.newBtn} onClick={() => setShowNew(true)}><Plus size={15} /> New Report</button>
         </div>
       </div>
 
-      {/* New report prompt */}
       {showNew && (
         <div className={styles.newBox}>
           <p className={styles.newLabel}>What report do you need?</p>

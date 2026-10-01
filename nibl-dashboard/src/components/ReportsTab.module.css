@@ -46,8 +46,24 @@
 .exportBtn { display: flex; align-items: center; gap: 6px; background: #166534; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .exportBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.narrative { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
-.narrative p { margin-bottom: 6px; }
+.narrative { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
+
+/* Markdown elements inside narrative */
+.mdH1 { font-size: 17px; font-weight: 700; color: var(--text); margin: 18px 0 8px; }
+.mdH2 { font-size: 15px; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+.mdH3 { font-size: 13px; font-weight: 700; color: var(--text); margin: 12px 0 4px; }
+.mdP { font-size: 13px; color: var(--text); line-height: 1.7; margin: 4px 0; }
+.mdHr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* Title + rename row */
+.titleRow { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.viewerTitle { font-size: 18px; font-weight: 700; color: var(--text); }
+.renameBtn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 3px; display: flex; align-items: center; flex-shrink: 0; }
+.renameBtn:hover { color: var(--accent, #2563eb); }
+.renameRow { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.renameInput { flex: 1; background: var(--surface); border: 1px solid var(--accent, #2563eb); border-radius: 6px; padding: 6px 10px; font-size: 15px; font-weight: 700; color: var(--text); outline: none; font-family: inherit; }
+.renameOk { background: var(--accent, #2563eb); color: #fff; border: none; border-radius: 6px; padding: 5px 8px; cursor: pointer; display: flex; align-items: center; }
+.renameCancel { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; cursor: pointer; color: var(--muted); display: flex; align-items: center; }
 
 /* Table */
 .tableWrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 20px; }
