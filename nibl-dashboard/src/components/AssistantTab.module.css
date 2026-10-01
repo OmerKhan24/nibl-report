@@ -1,0 +1,68 @@
+.root { display: flex; flex-direction: column; height: calc(100vh - 180px); min-height: 500px; }
+
+/* Toolbar */
+.toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.modelPicker { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+.modelSelect { background: none; border: none; font-size: 12px; color: var(--text); cursor: pointer; outline: none; font-family: inherit; padding-right: 4px; }
+.usageToggle { display: flex; align-items: center; gap: 6px; background: none; border: none; font-size: 12px; color: var(--muted); cursor: pointer; margin-left: auto; }
+.usageToggle:hover { color: var(--text); }
+
+/* Usage panel */
+.usagePanel { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; flex-direction: column; gap: 8px; }
+.usageRow { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.usageLabel { color: var(--muted); }
+.usageValue { font-weight: 700; color: var(--text); }
+.progressBg { height: 4px; background: var(--border); border-radius: 2px; }
+.progressBar { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.balanceEdit { display: flex; gap: 6px; margin-top: 4px; }
+.balanceInput { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); outline: none; }
+.balanceInput:focus { border-color: var(--accent, #2563eb); }
+.balanceSave { background: var(--accent, #2563eb); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+.balanceCancel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px; color: var(--muted); cursor: pointer; display: flex; align-items: center; }
+.balanceSetBtn { display: flex; align-items: center; gap: 5px; background: none; border: none; font-size: 11px; color: var(--accent, #2563eb); cursor: pointer; margin-top: 2px; }
+
+/* Thread */
+.thread { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.welcome { text-align: center; padding: 40px 24px; color: var(--muted); }
+.welcome svg { margin: 0 auto 12px; color: var(--accent, #2563eb); opacity: 0.6; display: block; }
+.welcome h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.welcome p { font-size: 13px; margin-bottom: 20px; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.suggestion { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--text); cursor: pointer; }
+.suggestion:hover { border-color: var(--accent, #2563eb); color: var(--accent, #2563eb); }
+
+/* Bubbles */
+.bubble { display: flex; gap: 10px; max-width: 90%; }
+.bubbleUser { align-self: flex-end; flex-direction: row-reverse; }
+.bubbleBot { align-self: flex-start; }
+
+.bubbleIcon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.bubbleUser .bubbleIcon { background: var(--accent, #2563eb); color: #fff; }
+.bubbleBot .bubbleIcon { background: var(--surface2); color: var(--muted); }
+
+.bubbleBody { display: flex; flex-direction: column; gap: 8px; }
+.bubbleText { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.bubbleUser .bubbleText { background: var(--accent, #2563eb); color: #fff; border-bottom-right-radius: 4px; }
+.bubbleBot .bubbleText { background: var(--surface2); color: var(--text); border-bottom-left-radius: 4px; }
+.bubbleText p { margin-bottom: 4px; }
+.bubbleText p:last-child { margin-bottom: 0; }
+.bubbleMeta { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--muted); padding: 0 4px; }
+.modelTag { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-weight: 600; color: var(--accent, #2563eb); }
+
+/* Typing indicator */
+.typing { display: flex; align-items: center; gap: 4px; padding: 12px 14px; background: var(--surface2); border-radius: 12px; border-bottom-left-radius: 4px; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,80%,100% { transform: scale(0.7); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+
+/* Input */
+.inputArea { display: flex; gap: 8px; padding: 12px 24px; border-top: 1px solid var(--border); background: var(--surface); align-items: flex-end; }
+.input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--text); resize: none; outline: none; font-family: inherit; line-height: 1.5; }
+.input:focus { border-color: var(--accent, #2563eb); }
+.sendBtn { background: var(--accent, #2563eb); color: #fff; border: none; border-radius: 10px; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; flex-shrink: 0; }
+.sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spin { animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

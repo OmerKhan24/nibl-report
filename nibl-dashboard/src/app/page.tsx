@@ -16,7 +16,9 @@ import CashTab from '@/components/CashTab';
 import InventoryTab from '@/components/InventoryTab';
 import TargetCard from '@/components/TargetCard';
 import ClickUpTab from '@/components/ClickUpTab';
-import { CreditCard, BarChart2, Package, CheckSquare } from 'lucide-react';
+import ReportsTab from '@/components/ReportsTab';
+import AssistantTab from '@/components/AssistantTab';
+import { CreditCard, BarChart2, Package, CheckSquare, FileText, MessageSquare } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import styles from './page.module.css';
@@ -38,7 +40,7 @@ const PRESETS = [
 export default function DashboardPage() {
   const [dateRange, setDateRange] = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
   const [activePreset, setActivePreset] = useState(3);
-  const [activeTab, setActiveTab] = useState<'sales' | 'cash' | 'inventory' | 'clickup'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'cash' | 'inventory' | 'clickup' | 'reports' | 'assistant'>('sales');
   const [sales, setSales] = useState<SalesApiResponse | null>(null);
   const [invoices, setInvoices] = useState<InvoicesApiResponse | null>(null);
   const [cash, setCash] = useState<any>(null);
@@ -191,6 +193,18 @@ export default function DashboardPage() {
           >
             <CheckSquare size={15} /> ClickUp Actions
           </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'reports' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <FileText size={15} /> AI Reports
+          </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'assistant' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('assistant')}
+          >
+            <MessageSquare size={15} /> AI Assistant
+          </button>
         </div>
       </div>
 
@@ -220,7 +234,11 @@ export default function DashboardPage() {
 
       {/* ── Content ── */}
       <main className={styles.main}>
-        {activeTab === 'clickup' ? (
+        {activeTab === 'reports' ? (
+          <ReportsTab />
+        ) : activeTab === 'assistant' ? (
+          <AssistantTab />
+        ) : activeTab === 'clickup' ? (
           <ClickUpTab />
         ) : loading && !sales ? (
           <div className={styles.loadingState}>

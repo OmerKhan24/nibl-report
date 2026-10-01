@@ -178,3 +178,63 @@ export interface InventoryApiResponse {
   prevMonthStart: string;
   prevMonthEnd: string;
 }
+
+// ── AI Reporting System ──────────────────────────────────────────────────────
+
+export interface ChartSeries {
+  key: string;
+  color: string;
+  name: string;
+}
+
+export interface ChartSpec {
+  __chartSpec: true;
+  type: 'bar' | 'line' | 'pie' | 'area' | 'composed';
+  title: string;
+  data: Record<string, unknown>[];
+  xKey: string;
+  series: ChartSeries[];
+  currency?: boolean;
+}
+
+export interface ReportTableColumn {
+  key: string;
+  header: string;
+  width?: number;
+  currency?: boolean;
+}
+
+export interface SavedReport {
+  id: string;
+  title: string;
+  query: string;
+  createdAt: string;
+  narrative: string;
+  tableData: Record<string, unknown>[];
+  tableColumns: ReportTableColumn[];
+  chartSpecs: ChartSpec[];
+  model: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  chartSpecs?: ChartSpec[];
+  model?: string;
+  costUsd?: number;
+  timestamp: string;
+}
+
+export interface UsageTotals {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCostUsd: number;
+  sessionCount: number;
+}
+
+export interface DashboardSettings {
+  apiBalance?: number;
+  balanceSetAt?: string;
+  monthlyBudgetUsd?: number;
+}
