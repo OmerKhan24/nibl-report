@@ -5,12 +5,6 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-PK', { style: 'decimal', maximumFractionDigits: 0 }).format(n);
 }
 
-function fmtK(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K`;
-  return fmt(n);
-}
-
 interface KpiCardProps {
   label: string;
   value: string;
@@ -38,31 +32,31 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
     <div className={styles.grid}>
       <KpiCard
         label="Gross Revenue"
-        value={`PKR ${fmtK(grossRevenue)}`}
+        value={`PKR ${fmt(grossRevenue)}`}
         sub={`${sales.total.orders} confirmed orders`}
         accent="#2563eb"
       />
       <KpiCard
         label="Refunds & Returns"
-        value={`−PKR ${fmtK(invoices.returnsAmount)}`}
+        value={`−PKR ${fmt(invoices.returnsAmount)}`}
         sub={`${invoices.returnsCount} return entries`}
         accent="#f87171"
       />
       <KpiCard
         label="Net Revenue"
-        value={`PKR ${fmtK(netRevenue)}`}
+        value={`PKR ${fmt(netRevenue)}`}
         sub="Gross minus refunds"
         accent="#34d399"
       />
       <KpiCard
         label="B2C · Shopify"
-        value={`PKR ${fmtK(sales.b2c.revenue)}`}
+        value={`PKR ${fmt(sales.b2c.revenue)}`}
         sub={`${sales.b2c.orders} orders · ${pct(sales.b2c.revenue)}`}
         accent="var(--b2c)"
       />
       <KpiCard
         label="B2B · Direct Sales"
-        value={`PKR ${fmtK(sales.b2b.revenue)}`}
+        value={`PKR ${fmt(sales.b2b.revenue)}`}
         sub={`${sales.b2b.orders} orders · ${pct(sales.b2b.revenue)}`}
         accent="var(--b2b)"
       />

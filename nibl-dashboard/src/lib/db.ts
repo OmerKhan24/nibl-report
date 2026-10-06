@@ -13,7 +13,7 @@ export function getPool(): Pool {
   pool = new Pool({
     host: process.env.PG_HOST,
     port: parseInt(process.env.PG_PORT ?? '5432'),
-    database: process.env.PG_DB ?? 'nibl-foods-pos',
+    database: process.env.PG_DB ?? 'nibl-pos-production',
     user: process.env.PG_USER ?? 'odoo19',
     password: process.env.PG_PASS,
     max: 3,           // keep low for serverless — each function instance gets 3 max

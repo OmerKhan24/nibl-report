@@ -142,15 +142,24 @@ export async function GET(req: NextRequest) {
       const partnerId = e.partner_id ? (e.partner_id as [number, string])[0] : 0;
       const odooCity = (partnerCityMap.get(partnerId) || '') as string;
 
+      // 1. Partner city field (most reliable)
       const cityUpper = odooCity.toUpperCase();
-      if (cityUpper.includes('KARACHI') || cityUpper.includes('KHI')) return 'Karachi';
-      if (cityUpper.includes('ISLAMABAD') || cityUpper.includes('ISB')) return 'Islamabad';
-      if (cityUpper.includes('LAHORE') || cityUpper.includes('LHE')) return 'Lahore';
+      if (cityUpper.includes('KARACHI') || cityUpper === 'KHI') return 'Karachi';
+      if (cityUpper.includes('ISLAMABAD') || cityUpper === 'ISB') return 'Islamabad';
+      if (cityUpper.includes('LAHORE') || cityUpper === 'LHE' || cityUpper === 'LHR') return 'Lahore';
 
+      // 2. Partner name + city combined heuristics
       const combined = `${partnerName} ${odooCity}`.toUpperCase();
-      if (combined.includes('ISB') || combined.includes('ISLAMABAD') || combined.includes('ISL') || combined.includes('G-10') || combined.includes('F-7') || combined.includes('BLUE AREA') || combined.includes('JINNAH SUPER') || combined.includes('F-11') || combined.includes('G-9') || combined.includes('G-15')) return 'Islamabad';
-      if (combined.includes('LHE') || combined.includes('LAHORE') || combined.includes('GULBERG') || combined.includes('JOHAR TOWN') || combined.includes('MODEL TOWN') || combined.includes('DEFENCE LHE')) return 'Lahore';
-      if (combined.includes('KHI') || combined.includes('KARACHI') || combined.includes('DHA') || combined.includes('CLIFTON') || combined.includes('GULSHAN') || combined.includes('TARIQ ROAD') || combined.includes('BAHADURABAD')) return 'Karachi';
+      if (combined.includes('ISB') || combined.includes('ISLAMABAD') || combined.includes('G-10') || combined.includes('F-7') || combined.includes('BLUE AREA') || combined.includes('JINNAH SUPER') || combined.includes('F-11') || combined.includes('G-9') || combined.includes('G-15')) return 'Islamabad';
+      if (combined.includes('LHE') || combined.includes('LHR') || combined.includes('LAHORE') || combined.includes('GULBERG') || combined.includes('JOHAR TOWN') || combined.includes('MODEL TOWN') || combined.includes('DEFENCE LHE')) return 'Lahore';
+      if (combined.includes('KHI') || combined.includes('KARACHI') || combined.includes('CLIFTON') || combined.includes('GULSHAN') || combined.includes('TARIQ ROAD') || combined.includes('BAHADURABAD')) return 'Karachi';
+
+      // 3. Fall back to move_name (catches MISC entries like "KHI/2026/..." with no partner city)
+      const moveName = (e.move_name || '').toUpperCase();
+      if (moveName.includes('KHI') || moveName.includes('KARACHI')) return 'Karachi';
+      if (moveName.includes('ISB') || moveName.includes('ISLAMABAD')) return 'Islamabad';
+      if (moveName.includes('LHE') || moveName.includes('LHR') || moveName.includes('LAHORE')) return 'Lahore';
+
       return 'Other';
     }
 
@@ -204,10 +213,14 @@ export async function GET(req: NextRequest) {
         else if (city === 'Lahore') { dubaiLhe += amt; dubaiLheCount++; }
         else if (city === 'Karachi') { dubaiKhi += amt; dubaiKhiCount++; }
         else { dubaiOther += amt; dubaiOtherCount++; }
-      } else if (jId === 17) { // KHI Cash in Hand
-        cashKhi += amt; cashKhiCount++;
-      } else if (jId === 18) { // ISB Cash in Hand
-        cashIsb += amt; cashIsbCount++;
+      } else if (jId === 17) { // KHI Cash in Hand — default KHI but respect partner city
+        if (city === 'Lahore') { cashLhe += amt; cashLheCount++; }
+        else if (city === 'Islamabad') { cashIsb += amt; cashIsbCount++; }
+        else { cashKhi += amt; cashKhiCount++; } // KHI or unknown → KHI
+      } else if (jId === 18) { // ISB Cash in Hand — default ISB but respect partner city
+        if (city === 'Lahore') { cashLhe += amt; cashLheCount++; }
+        else if (city === 'Karachi') { cashKhi += amt; cashKhiCount++; }
+        else { cashIsb += amt; cashIsbCount++; } // ISB or unknown → ISB
       } else {
         // Other journals (MISC, etc.) — route by city detection
         // "ISB Daily Sales" partner name → Islamabad → cashIsb

@@ -37,12 +37,13 @@
 }
 
 .value {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.8px;
-  line-height: 1.1;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
+  word-break: break-all;
 }
 
 .sub {

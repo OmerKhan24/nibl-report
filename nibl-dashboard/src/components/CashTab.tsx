@@ -9,11 +9,35 @@ interface Props {
   dateRange: { from: string; to: string } | null;
 }
 
+function fmt(n: number) {
+  return new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 }).format(n);
+}
+
 export default function CashTab({ data, dateRange }: Props) {
   const { cash, invoices } = data;
+  const totalCount = cash.sources.reduce((s, src) => s + src.count, 0);
 
   return (
     <div className={styles.container}>
+
+      {/* ── Summary banner ── */}
+      <div className={styles.summaryBanner}>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>Total Cash Collected</span>
+          <span className={styles.summaryValue}>PKR {fmt(cash.total)}</span>
+        </div>
+        <div className={styles.summaryDivider} />
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>Total Transactions</span>
+          <span className={styles.summaryValue}>{totalCount.toLocaleString()}</span>
+        </div>
+        <div className={styles.summaryDivider} />
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>Avg per Transaction</span>
+          <span className={styles.summaryValue}>PKR {totalCount ? fmt(Math.round(cash.total / totalCount)) : '—'}</span>
+        </div>
+      </div>
+
       <div className={styles.targetsGrid}>
         <TargetCard 
           title="Overall Cash Collection" 
