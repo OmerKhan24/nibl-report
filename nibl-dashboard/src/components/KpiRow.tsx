@@ -56,8 +56,8 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
       />
       <KpiCard
         label="B2B · Direct Sales"
-        value={`PKR ${fmt(sales.b2b.revenue)}`}
-        sub={`${sales.b2b.orders} orders · ${pct(sales.b2b.revenue)}`}
+        value={`PKR ${fmt(invoices.invoiceGrossRevenue)}`}
+        sub={`${invoices.total} invoices · ${pct(invoices.invoiceGrossRevenue)}`}
         accent="var(--b2b)"
       />
     </div>
