@@ -252,7 +252,7 @@ export default function DashboardPage() {
                 <div className={styles.targetsGrid}>
                   <TargetCard
                     title="Overall Sales"
-                    actual={sales.total.revenue}
+                    actual={invoices.invoiceGrossRevenue + sales.b2c.revenue}
                     dateRange={dateRange}
                     storageKey="nibl_sales_target"
                   />

@@ -23,7 +23,8 @@ function KpiCard({ label, value, sub, accent }: KpiCardProps) {
 }
 
 export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; invoices: InvoicesApiResponse }) {
-  const grossRevenue = invoices.invoiceGrossRevenue;
+  // Gross = B2B invoices (courier partners excluded to avoid double-counting D2C) + Shopify D2C
+  const grossRevenue = invoices.invoiceGrossRevenue + sales.b2c.revenue;
   const netRevenue = grossRevenue - invoices.returnsAmount;
   const pct = (n: number) => grossRevenue ? `${(n / grossRevenue * 100).toFixed(1)}% of total` : '—';
 
@@ -32,7 +33,7 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
       <KpiCard
         label="Gross Revenue"
         value={`PKR ${fmt(grossRevenue)}`}
-        sub={`${invoices.total} posted invoices`}
+        sub={`B2B invoices + Shopify D2C`}
         accent="#2563eb"
       />
       <KpiCard

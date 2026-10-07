@@ -63,7 +63,16 @@ export async function GET(req: NextRequest) {
 
     const total = invoices.length;
     const totalAmount = invoices.reduce((a, i) => a + i.amount_total, 0);
-    const invoiceGrossRevenue = invoices.reduce((a, i) => a + i.amount_untaxed, 0);
+
+    // B2B invoice revenue = all invoices except B2C courier/delivery partners
+    // Shopify D2C is tracked separately; their Odoo invoices would double-count
+    function isB2CInvoice(inv: Invoice): boolean {
+      const name = (inv.partner_id ? inv.partner_id[1] : '').toLowerCase();
+      return name.includes('trax') || name.includes('postex') || name.includes('payfast') ||
+             name.includes('pay fast') || name.includes('daily sales') || name.includes('shopify');
+    }
+    const b2bInvoices = invoices.filter(i => !isB2CInvoice(i));
+    const invoiceGrossRevenue = b2bInvoices.reduce((a, i) => a + i.amount_untaxed, 0);
 
     const byState = (ps: string) => invoices.filter(i => i.payment_state === ps);
     const sumAmt = (arr: Invoice[]) => arr.reduce((a, i) => a + i.amount_total, 0);
