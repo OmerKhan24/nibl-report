@@ -23,17 +23,16 @@ function KpiCard({ label, value, sub, accent }: KpiCardProps) {
 }
 
 export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; invoices: InvoicesApiResponse }) {
-  const totalRevenue = sales.total.revenue;
-  const pct = (n: number) => totalRevenue ? `${(n / totalRevenue * 100).toFixed(1)}% of total` : '—';
-  const grossRevenue = totalRevenue;
+  const grossRevenue = invoices.invoiceGrossRevenue;
   const netRevenue = grossRevenue - invoices.returnsAmount;
+  const pct = (n: number) => grossRevenue ? `${(n / grossRevenue * 100).toFixed(1)}% of total` : '—';
 
   return (
     <div className={styles.grid}>
       <KpiCard
         label="Gross Revenue"
         value={`PKR ${fmt(grossRevenue)}`}
-        sub={`${sales.total.orders} confirmed orders`}
+        sub={`${invoices.total} posted invoices`}
         accent="#2563eb"
       />
       <KpiCard
@@ -45,7 +44,7 @@ export default function KpiRow({ sales, invoices }: { sales: SalesApiResponse; i
       <KpiCard
         label="Net Revenue"
         value={`PKR ${fmt(netRevenue)}`}
-        sub="Gross minus refunds"
+        sub="Invoice gross minus returns"
         accent="#34d399"
       />
       <KpiCard
