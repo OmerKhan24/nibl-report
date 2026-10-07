@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
 
     const total = invoices.length;
     const totalAmount = invoices.reduce((a, i) => a + i.amount_total, 0);
+    const invoiceGrossRevenue = invoices.reduce((a, i) => a + i.amount_untaxed, 0);
 
     const byState = (ps: string) => invoices.filter(i => i.payment_state === ps);
     const sumAmt = (arr: Invoice[]) => arr.reduce((a, i) => a + i.amount_total, 0);
@@ -150,6 +151,7 @@ export async function GET(req: NextRequest) {
       returnsAmount,
       returnsCount,
       pnlRevenue,
+      invoiceGrossRevenue,
       outstandingCustomers,
     };
 
