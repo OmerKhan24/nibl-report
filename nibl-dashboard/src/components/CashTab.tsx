@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import type { DashboardData } from '@/lib/types';
 import CashChart from './CashChart';
 import ReceivablesTable from './ReceivablesTable';
@@ -20,19 +19,10 @@ export default function CashTab({ data, dateRange }: Props) {
   const { cash, invoices } = data;
   const totalCount = cash.sources.reduce((s, src) => s + src.count, 0);
 
-  const [cash90Total, setCash90Total] = useState<number | null>(null);
-
-  useEffect(() => {
-    const today = new Date();
-    const from90 = new Date(today);
-    from90.setDate(from90.getDate() - 90);
-    const toStr = today.toISOString().split('T')[0];
-    const fromStr = from90.toISOString().split('T')[0];
-    fetch(`/api/payments?from=${fromStr}&to=${toStr}`)
-      .then(r => r.json())
-      .then(d => { if (typeof d?.total === 'number') setCash90Total(d.total); })
-      .catch(() => {});
-  }, []);
+  const totalReceivables90 = (invoices?.outstandingCustomers || []).reduce(
+    (sum, c) => sum + (c.amountOutstanding || 0),
+    0
+  );
 
   return (
     <div className={styles.container}>
@@ -55,8 +45,8 @@ export default function CashTab({ data, dateRange }: Props) {
         </div>
         <div className={styles.summaryDivider} />
         <div className={styles.summaryItem}>
-          <span className={styles.summaryLabel}>Last 90 Days</span>
-          <span className={styles.summaryValue}>{cash90Total !== null ? `PKR ${fmt(cash90Total)}` : '…'}</span>
+          <span className={styles.summaryLabel}>90 Days Account Receivables Total</span>
+          <span className={styles.summaryValue}>PKR {fmt(totalReceivables90)}</span>
         </div>
       </div>
 

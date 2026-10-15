@@ -21,6 +21,8 @@ export default function ReceivablesTable({ customers }: Props) {
     );
   }
 
+  const totalOwed = customers.reduce((sum, c) => sum + (c.amountOutstanding || 0), 0);
+
   return (
     <div className={styles.card}>
       <div className={styles.header}>
@@ -58,6 +60,18 @@ export default function ReceivablesTable({ customers }: Props) {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className={styles.totalRow}>
+              <td colSpan={2} className={styles.totalLabel}>
+                Total Outstanding
+              </td>
+              <td className={styles.right}>
+                <span className={styles.totalAmount}>
+                  PKR {totalOwed.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
