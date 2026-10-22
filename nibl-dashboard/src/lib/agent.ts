@@ -170,8 +170,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       groupby?: string[]; order?: string; limit?: number;
     };
     if (method === 'read_group') {
-      const result = await odooQuery(model, 'read_group', [domain, fields || [], groupby || []], {
-        orderby: order, limit,
+      // Odoo 19.2 removed read_group; formatted_read_group replaces it.
+      // `fields` are aggregates like 'amount_total:sum' (plain names default to :sum).
+      const aggregates = (fields || []).map(f => (f.includes(':') ? f : `${f}:sum`));
+      if (!aggregates.includes('__count')) aggregates.push('__count');
+      const result = await odooQuery(model, 'formatted_read_group', [domain, groupby || [], aggregates], {
+        order, limit,
       });
       return JSON.stringify(result);
     }

@@ -37,10 +37,10 @@ npm install
 ### 3. Set up environment variables
 The `.env.local` file is already configured. If it's missing, create it:
 ```env
-ODOO_URL=https://nibl.odoo.com
-ODOO_DB=nibl
+ODOO_URL=https://odoo.niblfoods.com
+ODOO_DB=nibl-foods-production
 ODOO_USERNAME=saqib@niblfoods.com
-ODOO_API_KEY=f439ae403991f5a73c3f805c243d9b55b7af07c9
+ODOO_API_KEY=your-odoo-api-key
 ```
 
 ### 4. Run the dev server
@@ -64,10 +64,10 @@ Follow the prompts. When asked about environment variables, add the 4 variables 
 1. Push this folder to a GitHub repo
 2. Go to https://vercel.com → New Project → Import your repo
 3. In **Environment Variables**, add:
-   - `ODOO_URL` = `https://nibl.odoo.com`
-   - `ODOO_DB` = `nibl`
+   - `ODOO_URL` = `https://odoo.niblfoods.com`
+   - `ODOO_DB` = `nibl-foods-production`
    - `ODOO_USERNAME` = `saqib@niblfoods.com`
-   - `ODOO_API_KEY` = `f439ae403991f5a73c3f805c243d9b55b7af07c9`
+   - `ODOO_API_KEY` = `your-odoo-api-key`
 4. Click **Deploy** — done! ✅
 
 ---

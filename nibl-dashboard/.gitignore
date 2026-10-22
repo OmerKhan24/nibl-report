@@ -4,3 +4,16 @@ node_modules/
 .next/
 out/
 *.log
+
+# secrets & local data (keep out of git)
+.env.production
+*.xlsx
+partners_dump.json
+test_*.json
+
+# scratch scripts with hardcoded credentials
+scratch_*
+/test_inv.mjs
+/check_companies.py
+/route.ts
+.claude/

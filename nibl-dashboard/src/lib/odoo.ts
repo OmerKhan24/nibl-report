@@ -6,8 +6,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
 const xmlrpc = require('xmlrpc');
 
-const ODOO_URL  = process.env.ODOO_URL       || 'https://nibl.odoo.com';
-const ODOO_DB   = process.env.ODOO_DB        || 'nibl';
+const ODOO_URL  = process.env.ODOO_URL       || 'https://odoo.niblfoods.com';
+const ODOO_DB   = process.env.ODOO_DB        || 'nibl-foods-production';
 const ODOO_USER = process.env.ODOO_USERNAME  || '';
 const ODOO_KEY  = process.env.ODOO_API_KEY   || '';
 
