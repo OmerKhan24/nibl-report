@@ -1,16 +1,17 @@
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   padding: 18px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.2s;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s;
 }
-.card:hover { border-color: var(--border-strong); }
+.card:hover { border-color: var(--border-strong); transform: translateY(-3px); box-shadow: var(--shadow-md); }
 
 .topRow {
   display: flex;

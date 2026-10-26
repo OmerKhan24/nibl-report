@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SalesApiResponse, InvoicesApiResponse } from '@/lib/types';
 import KpiRow from '@/components/KpiRow';
 import ChannelCards from '@/components/ChannelCards';
-import RevenueChart from '@/components/RevenueChart';
+import RepeatCustomers from '@/components/RepeatCustomers';
 import MixDonut from '@/components/MixDonut';
 import TopTable from '@/components/TopTable';
 import InvoiceStatus from '@/components/InvoiceStatus';
@@ -38,8 +38,8 @@ const PRESETS = [
 ];
 
 export default function DashboardPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(PRESETS[3].getValue()); // default: This Year
-  const [activePreset, setActivePreset] = useState(3);
+  const [dateRange, setDateRange] = useState<DateRange>(PRESETS[0].getValue()); // default: This Month
+  const [activePreset, setActivePreset] = useState(0);
   const [activeTab, setActiveTab] = useState<'sales' | 'cash' | 'inventory' | 'clickup' | 'reports' | 'assistant'>('sales');
   const [sales, setSales] = useState<SalesApiResponse | null>(null);
   const [invoices, setInvoices] = useState<InvoicesApiResponse | null>(null);
@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 </div>
                 <div className={styles.chartsRow}>
                   <div className={styles.chartMain}>
-                    <RevenueChart data={sales.monthly} />
+                    <RepeatCustomers data={sales.repeatCustomers} />
                   </div>
                   <div className={styles.chartSide}>
                     <MixDonut sales={sales} invoices={invoices} />

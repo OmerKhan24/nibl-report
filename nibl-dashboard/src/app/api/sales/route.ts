@@ -328,7 +328,55 @@ export async function GET(req: NextRequest) {
       }
     };
 
+    // ── Repeat customers (Shopify) ──────────────────────────────
+    // A customer counts as "repeat within N days" when they placed an order in the
+    // selected range and had a previous order at most N days before it.
+    // Look back 60 days before the range start so early-range orders are judged fairly.
+    let lookbackOrders: any[] = [];
+    if (from) {
+      const lbFrom = new Date(`${from}T00:00:00Z`);
+      lbFrom.setUTCDate(lbFrom.getUTCDate() - 60);
+      const lbTo = new Date(`${from}T00:00:00Z`);
+      lbTo.setUTCDate(lbTo.getUTCDate() - 1);
+      lookbackOrders = await fetchShopifyOrders(lbFrom.toISOString().slice(0, 10), lbTo.toISOString().slice(0, 10));
+    }
+    const repeatPool = [...lookbackOrders, ...shopifyOrdersRaw].filter((so: any) => {
+      if (so.test || !so.customer?.id) return false;
+      return !(so.cancelled_at && (so.financial_status === 'pending' || so.financial_status === 'voided'));
+    });
+    const customerOrders = new Map<number, number[]>();
+    for (const so of repeatPool) {
+      const t = new Date(so.created_at).getTime();
+      const list = customerOrders.get(so.customer.id) ?? [];
+      list.push(t);
+      customerOrders.set(so.customer.id, list);
+    }
+    const rangeStart = from ? new Date(`${from}T00:00:00+05:00`).getTime() : 0;
+    const DAY = 86_400_000;
+    let rcCustomers = 0, rc30 = 0, rc60 = 0;
+    for (const times of customerOrders.values()) {
+      times.sort((a, b) => a - b);
+      const inRange = times.filter(t => t >= rangeStart);
+      if (!inRange.length) continue;
+      rcCustomers++;
+      let is30 = false, is60 = false;
+      for (let i = 0; i < times.length; i++) {
+        if (times[i] < rangeStart || i === 0) continue;
+        const gap = (times[i] - times[i - 1]) / DAY;
+        if (gap <= 30) is30 = true;
+        if (gap <= 60) is60 = true;
+      }
+      if (is30) rc30++;
+      if (is60) rc60++;
+    }
+    const repeatCustomers = {
+      customers: rcCustomers,
+      d30: { count: rc30, rate: rcCustomers ? (rc30 / rcCustomers) * 100 : 0 },
+      d60: { count: rc60, rate: rcCustomers ? (rc60 / rcCustomers) * 100 : 0 },
+    };
+
     const response: SalesApiResponse = {
+      repeatCustomers,
       b2c: {
         orders: allB2cOrders.length,
         revenue: b2cRevenue,

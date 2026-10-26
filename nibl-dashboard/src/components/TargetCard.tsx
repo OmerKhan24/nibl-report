@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
+import CountUp from './CountUp';
 import styles from './TargetCard.module.css';
 
 interface TargetCardProps {
@@ -109,7 +110,7 @@ export default function TargetCard({ title, actual, dateRange, storageKey }: Tar
         <>
           <div className={styles.mainMetric}>
             <div className={styles.percentage} style={{ color: statusColor, display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              {actualPctOfMonthly.toFixed(1)}% <span style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 'normal' }}>of month</span>
+              <span><CountUp value={actualPctOfMonthly} format={n => n.toFixed(1)} />%</span> <span style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 'normal' }}>of month</span>
             </div>
           </div>
 
@@ -135,7 +136,7 @@ export default function TargetCard({ title, actual, dateRange, storageKey }: Tar
           <div className={styles.bottomRow}>
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>Actual</span>
-              <span className={styles.metaValue}>PKR {fmtK(actual)}</span>
+              <span className={styles.metaValue}>PKR <CountUp value={actual} format={fmtK} /></span>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>

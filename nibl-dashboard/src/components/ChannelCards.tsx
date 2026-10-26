@@ -1,4 +1,5 @@
 import type { SalesApiResponse, ChannelStats } from '@/lib/types';
+import CountUp from './CountUp';
 import styles from './ChannelCards.module.css';
 
 function fmtK(n: number) {
@@ -33,26 +34,26 @@ function ChannelCard({ stats, title, subtitle, color, lightBg, pct }: ChannelCar
           </div>
         </div>
         <div className={styles.bigRevenue} style={{ color }}>
-          PKR {fmtK(stats.revenue)}
+          PKR <CountUp value={stats.revenue} format={fmtK} />
         </div>
       </div>
 
       <div className={styles.statsRow}>
         <div className={styles.stat}>
           <div className={styles.statLabel}>Orders</div>
-          <div className={styles.statVal} style={{ color }}>{stats.orders}</div>
+          <div className={styles.statVal} style={{ color }}><CountUp value={stats.orders} /></div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statLabel}>Avg Order</div>
-          <div className={styles.statVal} style={{ color }}>PKR {fmtK(stats.avgOrder)}</div>
+          <div className={styles.statVal} style={{ color }}>PKR <CountUp value={stats.avgOrder} format={fmtK} /></div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statLabel}>Quotations</div>
-          <div className={styles.statVal} style={{ color }}>{stats.drafts}</div>
+          <div className={styles.statVal} style={{ color }}><CountUp value={stats.drafts} /></div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statLabel}>Rev Share</div>
-          <div className={styles.statVal} style={{ color }}>{pct.toFixed(1)}%</div>
+          <div className={styles.statVal} style={{ color }}><CountUp value={pct} format={n => `${n.toFixed(1)}%`} /></div>
         </div>
       </div>
 

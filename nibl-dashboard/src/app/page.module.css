@@ -6,8 +6,11 @@
 
 /* ── Header ── */
 .header {
-  background: var(--surface);
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 12px rgba(15,23,42,0.05);
   padding: 0 40px;
   height: 56px;
   display: flex;
@@ -137,7 +140,7 @@
 
 /* ── Tab Bar ── */
 .tabBar {
-  background: var(--surface);
+  background: rgba(255,255,255,0.7);
   border-bottom: 1px solid var(--border);
   padding: 0 40px;
   display: flex;
@@ -184,17 +187,18 @@
 }
 
 .tabActive {
-  color: var(--blue);
-  border-bottom-color: var(--blue);
+  color: var(--b2b);
+  border-bottom-color: var(--b2b);
+  background: linear-gradient(to top, rgba(124,58,237,0.08), transparent);
 }
 
 .tabActive:hover {
-  color: var(--blue);
+  color: var(--b2b);
 }
 
 /* ── Date Bar ── */
 .dateBar {
-  background: var(--surface);
+  background: rgba(255,255,255,0.55);
   border-bottom: 1px solid var(--border);
   padding: 0 40px;
   display: flex;
@@ -245,10 +249,12 @@
 }
 
 .presetActive {
-  background: var(--blue-light);
-  color: var(--blue);
-  border-color: rgba(96, 165, 250, 0.22);
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
 }
+.presetActive:hover { background: linear-gradient(135deg, #7c3aed, #2563eb); color: #fff; }
 
 /* ── Error ── */
 .errorBanner {
@@ -270,6 +276,14 @@
   flex-direction: column;
   gap: 18px;
 }
+
+.main > *, .main > div > * {
+  animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.main > div > *:nth-child(2) { animation-delay: 0.06s; }
+.main > div > *:nth-child(3) { animation-delay: 0.12s; }
+.main > div > *:nth-child(4) { animation-delay: 0.18s; }
+.main > div > *:nth-child(5) { animation-delay: 0.24s; }
 
 .loadingState {
   display: flex;

@@ -84,7 +84,19 @@ export interface ChannelTargetsData {
   institutions: ChannelStats;
 }
 
+export interface RepeatWindow {
+  count: number;
+  rate: number;
+}
+
+export interface RepeatCustomers {
+  customers: number;
+  d30: RepeatWindow;
+  d60: RepeatWindow;
+}
+
 export interface SalesApiResponse {
+  repeatCustomers: RepeatCustomers;
   b2c: ChannelStats;
   b2b: ChannelStats;
   total: {
