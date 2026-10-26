@@ -1,7 +1,7 @@
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: linear-gradient(160deg, #f5f3ff 0%, #ffffff 50%, #f0f9ff 100%);
+  border: 1px solid #e0e7ff;
+  border-radius: 20px;
   box-shadow: var(--shadow-sm);
   padding: 18px 18px 14px;
   display: flex;
@@ -70,7 +70,7 @@
 }
 
 .percentage {
-  font-size: 36px;
+  font-size: 40px;
   font-weight: 900;
   letter-spacing: -2px;
   line-height: 1;
@@ -79,16 +79,17 @@
 }
 
 .progressBar {
-  height: 4px;
-  background: var(--surface2);
-  border-radius: 2px;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid var(--border);
 }
 
 .progressFill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 6px;
+  box-shadow: 0 0 10px currentColor;
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
   max-width: 100%;
 }

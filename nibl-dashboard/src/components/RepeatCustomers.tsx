@@ -1,10 +1,10 @@
-import type { RepeatCustomers as RepeatData } from '@/lib/types';
+import type { RepeatCustomers as RepeatData, RepeatWindow } from '@/lib/types';
 import CountUp from './CountUp';
 import styles from './RepeatCustomers.module.css';
 
 interface CardProps {
   title: string;
-  window: { count: number; rate: number };
+  window: RepeatWindow;
   total: number;
   color: string;
 }
@@ -23,6 +23,17 @@ function RepeatCard({ title, window: w, total, color }: CardProps) {
       <div className={styles.bar}>
         <div className={styles.fill} style={{ width: `${Math.min(w.rate, 100)}%` }} />
       </div>
+      {w.people.length > 0 && (
+        <ul className={styles.list}>
+          {w.people.map((p, i) => (
+            <li key={`${p.name}-${i}`} className={styles.person}>
+              <span className={styles.avatar}>{p.name.charAt(0).toUpperCase()}</span>
+              <span className={styles.pname}>{p.name}</span>
+              <span className={styles.pmeta}>{p.orders} orders · {p.gapDays}d gap</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

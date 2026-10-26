@@ -84,9 +84,16 @@ export interface ChannelTargetsData {
   institutions: ChannelStats;
 }
 
+export interface RepeatPerson {
+  name: string;
+  orders: number;   // orders placed in the selected range
+  gapDays: number;  // shortest gap between two consecutive orders
+}
+
 export interface RepeatWindow {
   count: number;
   rate: number;
+  people: RepeatPerson[];
 }
 
 export interface RepeatCustomers {

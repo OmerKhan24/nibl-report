@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
 import { fetchShopifyOrders } from '@/lib/shopify';
-import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, CityRevenue, DeliveryBreakdown } from '@/lib/types';
+import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, RepeatPerson, CityRevenue, DeliveryBreakdown } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -345,7 +345,10 @@ export async function GET(req: NextRequest) {
       return !(so.cancelled_at && (so.financial_status === 'pending' || so.financial_status === 'voided'));
     });
     const customerOrders = new Map<number, number[]>();
+    const customerNames = new Map<number, string>();
     for (const so of repeatPool) {
+      const nm = `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim();
+      customerNames.set(so.customer.id, nm || so.customer.email || `Customer #${so.customer.id}`);
       const t = new Date(so.created_at).getTime();
       const list = customerOrders.get(so.customer.id) ?? [];
       list.push(t);
@@ -354,25 +357,30 @@ export async function GET(req: NextRequest) {
     const rangeStart = from ? new Date(`${from}T00:00:00+05:00`).getTime() : 0;
     const DAY = 86_400_000;
     let rcCustomers = 0, rc30 = 0, rc60 = 0;
-    for (const times of customerOrders.values()) {
+    const names30: RepeatPerson[] = [], names60: RepeatPerson[] = [];
+    for (const [cid, times] of customerOrders.entries()) {
       times.sort((a, b) => a - b);
       const inRange = times.filter(t => t >= rangeStart);
       if (!inRange.length) continue;
       rcCustomers++;
-      let is30 = false, is60 = false;
+      let is30 = false, is60 = false, minGap = Infinity;
       for (let i = 0; i < times.length; i++) {
         if (times[i] < rangeStart || i === 0) continue;
         const gap = (times[i] - times[i - 1]) / DAY;
+        if (gap < minGap) minGap = gap;
         if (gap <= 30) is30 = true;
         if (gap <= 60) is60 = true;
       }
-      if (is30) rc30++;
-      if (is60) rc60++;
+      const person = { name: customerNames.get(cid) || 'Unknown', orders: inRange.length, gapDays: Math.round(minGap) };
+      if (is30) { rc30++; names30.push(person); }
+      if (is60) { rc60++; names60.push(person); }
     }
+    names30.sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name));
+    names60.sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name));
     const repeatCustomers = {
       customers: rcCustomers,
-      d30: { count: rc30, rate: rcCustomers ? (rc30 / rcCustomers) * 100 : 0 },
-      d60: { count: rc60, rate: rcCustomers ? (rc60 / rcCustomers) * 100 : 0 },
+      d30: { count: rc30, rate: rcCustomers ? (rc30 / rcCustomers) * 100 : 0, people: names30 },
+      d60: { count: rc60, rate: rcCustomers ? (rc60 / rcCustomers) * 100 : 0, people: names60 },
     };
 
     const response: SalesApiResponse = {

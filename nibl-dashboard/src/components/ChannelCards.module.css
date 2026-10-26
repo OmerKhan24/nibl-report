@@ -7,9 +7,9 @@
 @media (max-width: 900px)  { .grid { grid-template-columns: 1fr; } }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 13%, #fff) 0%, #fff 55%);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 20px;
   box-shadow: var(--shadow-sm);
   padding: 20px 22px;
   position: relative;
@@ -28,7 +28,8 @@
 .channelInfo { display: flex; flex-direction: column; gap: 5px; }
 
 .dot {
-  width: 8px; height: 8px;
+  width: 12px; height: 12px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
   border-radius: 50%;
   margin-bottom: 4px;
 }
@@ -51,7 +52,7 @@
 }
 
 .bigRevenue {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.8px;
   font-variant-numeric: tabular-nums;

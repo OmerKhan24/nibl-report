@@ -43,9 +43,12 @@
 
 .subtitle {
   font-size: 12px;
-  color: var(--muted);
-  font-weight: 500;
-  letter-spacing: 0.1px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: linear-gradient(90deg, #7c3aed, #0ea5e9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .headerRight {
@@ -140,60 +143,40 @@
 
 /* ── Tab Bar ── */
 .tabBar {
-  background: rgba(255,255,255,0.7);
-  border-bottom: 1px solid var(--border);
-  padding: 0 40px;
+  background: linear-gradient(90deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 8px 40px;
   display: flex;
-  align-items: stretch;
-  height: 44px;
+  align-items: center;
   overflow-x: auto;
   scrollbar-width: none;
 }
-
-.tabBar::-webkit-scrollbar {
-  display: none;
-}
-
-.tabs {
-  display: flex;
-  align-items: stretch;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.tabs::-webkit-scrollbar {
-  display: none;
-}
+.tabBar::-webkit-scrollbar { display: none; }
+.tabs { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 
 .tabBtn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 14px;
+  gap: 7px;
+  padding: 9px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--muted);
+  color: rgba(255,255,255,0.65);
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.2s;
   white-space: nowrap;
   font-family: inherit;
 }
+.tabBtn:hover { color: #fff; background: rgba(255,255,255,0.08); }
 
-.tabBtn:hover {
-  color: var(--text-2);
-}
-
-.tabActive {
-  color: var(--b2b);
-  border-bottom-color: var(--b2b);
-  background: linear-gradient(to top, rgba(124,58,237,0.08), transparent);
-}
-
-.tabActive:hover {
-  color: var(--b2b);
+.tabActive, .tabActive:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #0ea5e9);
+  box-shadow: 0 4px 16px rgba(124,58,237,0.5);
 }
 
 /* ── Date Bar ── */
@@ -204,7 +187,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 40px;
+  height: 52px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -228,10 +211,10 @@
 }
 
 .presetBtn {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--muted);
