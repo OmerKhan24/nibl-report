@@ -14,6 +14,7 @@ const LS_KEY = 'nibl_receivable_assignments';
 export default function ReceivablesTable({ customers }: Props) {
   const [assigned, setAssigned] = useState<Record<string, string>>({});
   const [exporting, setExporting] = useState(false);
+  const [filter, setFilter] = useState<string>('ALL'); // 'ALL' | 'UNASSIGNED' | person name
 
   // Local copy first (instant, survives if the server store is not persistent), then the shared copy wins.
   useEffect(() => {
@@ -49,6 +50,15 @@ export default function ReceivablesTable({ customers }: Props) {
     }).catch(() => {});
   };
 
+  const personOf = (c: OutstandingCustomer) => assigned[String(c.id)] || '';
+  const people = Array.from(new Set(customers.map(personOf).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const countFor = (name: string) => customers.filter(c => personOf(c) === name).length;
+  const unassignedCount = customers.filter(c => !personOf(c)).length;
+  const activeFilter = filter === 'ALL' || filter === 'UNASSIGNED' || people.includes(filter) ? filter : 'ALL';
+  const visible = customers.filter(c =>
+    activeFilter === 'ALL' ? true : activeFilter === 'UNASSIGNED' ? !personOf(c) : personOf(c) === activeFilter
+  );
+
   const downloadExcel = async () => {
     setExporting(true);
     try {
@@ -63,7 +73,7 @@ export default function ReceivablesTable({ customers }: Props) {
             { key: 'amount', header: 'Amount Owed', width: 20, currency: true },
             { key: 'assignedTo', header: 'Assigned To', width: 26 },
           ],
-          rows: customers.map(c => ({
+          rows: visible.map(c => ({
             customer: c.name,
             invoices: c.invoiceCount,
             amount: c.amountOutstanding,
@@ -98,19 +108,33 @@ export default function ReceivablesTable({ customers }: Props) {
     );
   }
 
-  const totalOwed = customers.reduce((sum, c) => sum + (c.amountOutstanding || 0), 0);
+  const totalOwed = visible.reduce((sum, c) => sum + (c.amountOutstanding || 0), 0);
 
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <div className={styles.titleRow}>
           <h2 className={styles.title}>Accounts Receivable (90 Days)</h2>
-          <span className={styles.badge}>{customers.length} Customers</span>
+          <span className={styles.badge}>{visible.length} Customers</span>
           <button className={styles.exportBtn} onClick={downloadExcel} disabled={exporting}>
             <Download size={14} /> {exporting ? 'Preparing…' : 'Download Excel'}
           </button>
         </div>
         <p className={styles.subtitle}>Outstanding balances older than 90 days</p>
+      </div>
+
+      <div className={styles.filterBar}>
+        <button className={`${styles.chip} ${activeFilter === 'ALL' ? styles.chipActive : ''}`} onClick={() => setFilter('ALL')}>
+          All <span>{customers.length}</span>
+        </button>
+        {people.map(name => (
+          <button key={name} className={`${styles.chip} ${activeFilter === name ? styles.chipActive : ''}`} onClick={() => setFilter(name)}>
+            {name} <span>{countFor(name)}</span>
+          </button>
+        ))}
+        <button className={`${styles.chip} ${activeFilter === 'UNASSIGNED' ? styles.chipActive : ''}`} onClick={() => setFilter('UNASSIGNED')}>
+          Unassigned <span>{unassignedCount}</span>
+        </button>
       </div>
 
       <div className={styles.tableWrap}>
@@ -124,7 +148,7 @@ export default function ReceivablesTable({ customers }: Props) {
             </tr>
           </thead>
           <tbody>
-            {customers.map(c => (
+            {visible.map(c => (
               <tr key={c.id}>
                 <td className={styles.nameCell}>
                   <div className={styles.customerName}>{c.name}</div>

@@ -177,3 +177,35 @@
 }
 .assignInput:focus { border-color: var(--b2b); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15); }
 .assignInput::placeholder { color: var(--muted-2); font-weight: 500; }
+
+.filterBar { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip span {
+  font-size: 10.5px;
+  background: var(--surface3);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.chip:hover { border-color: var(--b2b); color: var(--b2b); }
+.chipActive, .chipActive:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+.chipActive span { background: rgba(255, 255, 255, 0.25); color: #fff; }
