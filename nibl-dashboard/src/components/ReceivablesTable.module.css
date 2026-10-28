@@ -84,7 +84,7 @@
 }
 
 .nameCell {
-  width: 50%;
+  width: 40%;
 }
 
 .customerName {
@@ -140,3 +140,40 @@
   font-size: 0.95rem;
 }
 
+
+.exportBtn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #059669, #10b981);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.exportBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(5, 150, 105, 0.45); }
+.exportBtn:disabled { opacity: 0.6; cursor: wait; }
+
+.assignInput {
+  width: 100%;
+  min-width: 150px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.assignInput:focus { border-color: var(--b2b); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15); }
+.assignInput::placeholder { color: var(--muted-2); font-weight: 500; }

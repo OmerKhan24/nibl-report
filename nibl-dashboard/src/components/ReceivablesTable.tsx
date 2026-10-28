@@ -1,12 +1,89 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import type { OutstandingCustomer } from '@/lib/types';
 import styles from './ReceivablesTable.module.css';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Download } from 'lucide-react';
 
 interface Props {
   customers: OutstandingCustomer[];
 }
 
+const LS_KEY = 'nibl_receivable_assignments';
+
 export default function ReceivablesTable({ customers }: Props) {
+  const [assigned, setAssigned] = useState<Record<string, string>>({});
+  const [exporting, setExporting] = useState(false);
+
+  // Local copy first (instant, survives if the server store is not persistent), then the shared copy wins.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) setAssigned(JSON.parse(raw));
+    } catch { /* ignore */ }
+    fetch('/api/assignments')
+      .then(r => (r.ok ? r.json() : null))
+      .then(remote => {
+        if (remote && Object.keys(remote).length) {
+          setAssigned(prev => {
+            const merged = { ...prev, ...remote };
+            try { localStorage.setItem(LS_KEY, JSON.stringify(merged)); } catch { /* ignore */ }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveAssignment = (id: number, name: string) => {
+    const clean = name.trim();
+    if ((assigned[String(id)] || '') === clean) return;
+    const next = { ...assigned };
+    if (clean) next[String(id)] = clean; else delete next[String(id)];
+    setAssigned(next);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    fetch('/api/assignments', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name: clean }),
+    }).catch(() => {});
+  };
+
+  const downloadExcel = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Receivables 90 Days',
+          columns: [
+            { key: 'customer', header: 'Customer', width: 40 },
+            { key: 'invoices', header: 'Unpaid Invoices', width: 16 },
+            { key: 'amount', header: 'Amount Owed', width: 20, currency: true },
+            { key: 'assignedTo', header: 'Assigned To', width: 26 },
+          ],
+          rows: customers.map(c => ({
+            customer: c.name,
+            invoices: c.invoiceCount,
+            amount: c.amountOutstanding,
+            assignedTo: assigned[String(c.id)] || '',
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Receivables_90_Days_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!customers || customers.length === 0) {
     return (
       <div className={styles.card}>
@@ -29,6 +106,9 @@ export default function ReceivablesTable({ customers }: Props) {
         <div className={styles.titleRow}>
           <h2 className={styles.title}>Accounts Receivable (90 Days)</h2>
           <span className={styles.badge}>{customers.length} Customers</span>
+          <button className={styles.exportBtn} onClick={downloadExcel} disabled={exporting}>
+            <Download size={14} /> {exporting ? 'Preparing…' : 'Download Excel'}
+          </button>
         </div>
         <p className={styles.subtitle}>Outstanding balances older than 90 days</p>
       </div>
@@ -40,6 +120,7 @@ export default function ReceivablesTable({ customers }: Props) {
               <th>Customer</th>
               <th>Unpaid Invoices</th>
               <th className={styles.right}>Amount Owed</th>
+              <th>Assigned To</th>
             </tr>
           </thead>
           <tbody>
@@ -57,6 +138,17 @@ export default function ReceivablesTable({ customers }: Props) {
                     <span className={styles.amount}>PKR {c.amountOutstanding.toLocaleString()}</span>
                   </div>
                 </td>
+                <td>
+                  <input
+                    key={`${c.id}-${assigned[String(c.id)] || ''}`}
+                    className={styles.assignInput}
+                    defaultValue={assigned[String(c.id)] || ''}
+                    placeholder="Assign person…"
+                    maxLength={80}
+                    onBlur={e => saveAssignment(c.id, e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -70,6 +162,7 @@ export default function ReceivablesTable({ customers }: Props) {
                   PKR {totalOwed.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </td>
+              <td />
             </tr>
           </tfoot>
         </table>
