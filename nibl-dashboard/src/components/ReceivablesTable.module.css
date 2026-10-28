@@ -84,7 +84,7 @@
 }
 
 .nameCell {
-  width: 40%;
+  width: 34%;
 }
 
 .customerName {
@@ -209,3 +209,22 @@
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
 }
 .chipActive span { background: rgba(255, 255, 255, 0.25); color: #fff; }
+
+.filterLabel {
+  align-self: center;
+  min-width: 48px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.cityTag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--b2b);
+  background: var(--b2b-light);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}

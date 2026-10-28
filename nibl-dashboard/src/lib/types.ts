@@ -175,6 +175,7 @@ export interface CashApiResponse {
 
 export interface OutstandingCustomer {
   id: number;
+  city?: string;
   name: string;
   amountOutstanding: number;
   invoiceCount: number;

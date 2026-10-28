@@ -139,6 +139,27 @@ export async function GET(req: NextRequest) {
       c.invoiceCount++;
     });
 
+    // City lookup: Odoo partner city first, then hints in the name, else "Other"
+    const normCity = (txt: string): string | null => {
+      const t = txt.toLowerCase();
+      if (/karachi|\bkhi\b/.test(t)) return 'Karachi';
+      if (/islamabad|rawalpindi|\bisb\b|\brwp\b/.test(t)) return 'Islamabad';
+      if (/lahore|\blhe\b/.test(t)) return 'Lahore';
+      return null;
+    };
+    const partnerIds = Array.from(outMap.keys());
+    const cityById = new Map<number, string>();
+    if (partnerIds.length) {
+      const partners = await odooQuery<{ id: number; city: string | false }[]>(
+        'res.partner', 'search_read', [[['id', 'in', partnerIds]]], { fields: ['id', 'city'], limit: 10000 }
+      );
+      for (const p of partners) if (p.city) cityById.set(p.id, p.city.trim());
+    }
+    outMap.forEach(c => {
+      const raw = cityById.get(c.id) || '';
+      c.city = normCity(raw) || normCity(c.name) || (raw ? raw.replace(/\b\w/g, ch => ch.toUpperCase()) : 'Other');
+    });
+
     const outstandingCustomers = Array.from(outMap.values())
       .filter(c => c.amountOutstanding > 0)
       .sort((a, b) => b.amountOutstanding - a.amountOutstanding); // all outstanding customers

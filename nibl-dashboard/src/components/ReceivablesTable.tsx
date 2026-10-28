@@ -15,6 +15,7 @@ export default function ReceivablesTable({ customers }: Props) {
   const [assigned, setAssigned] = useState<Record<string, string>>({});
   const [exporting, setExporting] = useState(false);
   const [filter, setFilter] = useState<string>('ALL'); // 'ALL' | 'UNASSIGNED' | person name
+  const [cityFilter, setCityFilter] = useState<string>('ALL');
 
   // Local copy first (instant, survives if the server store is not persistent), then the shared copy wins.
   useEffect(() => {
@@ -55,8 +56,14 @@ export default function ReceivablesTable({ customers }: Props) {
   const countFor = (name: string) => customers.filter(c => personOf(c) === name).length;
   const unassignedCount = customers.filter(c => !personOf(c)).length;
   const activeFilter = filter === 'ALL' || filter === 'UNASSIGNED' || people.includes(filter) ? filter : 'ALL';
+  const cityOf = (c: OutstandingCustomer) => c.city || 'Other';
+  const cities = Array.from(new Set(customers.map(cityOf))).sort((a, b) =>
+    a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b)
+  );
+  const activeCity = cityFilter === 'ALL' || cities.includes(cityFilter) ? cityFilter : 'ALL';
   const visible = customers.filter(c =>
-    activeFilter === 'ALL' ? true : activeFilter === 'UNASSIGNED' ? !personOf(c) : personOf(c) === activeFilter
+    (activeFilter === 'ALL' ? true : activeFilter === 'UNASSIGNED' ? !personOf(c) : personOf(c) === activeFilter) &&
+    (activeCity === 'ALL' ? true : cityOf(c) === activeCity)
   );
 
   const downloadExcel = async () => {
@@ -71,12 +78,14 @@ export default function ReceivablesTable({ customers }: Props) {
             { key: 'customer', header: 'Customer', width: 40 },
             { key: 'invoices', header: 'Unpaid Invoices', width: 16 },
             { key: 'amount', header: 'Amount Owed', width: 20, currency: true },
+            { key: 'city', header: 'City', width: 16 },
             { key: 'assignedTo', header: 'Assigned To', width: 26 },
           ],
           rows: visible.map(c => ({
             customer: c.name,
             invoices: c.invoiceCount,
             amount: c.amountOutstanding,
+            city: cityOf(c),
             assignedTo: assigned[String(c.id)] || '',
           })),
         }),
@@ -124,6 +133,7 @@ export default function ReceivablesTable({ customers }: Props) {
       </div>
 
       <div className={styles.filterBar}>
+        <span className={styles.filterLabel}>Person</span>
         <button className={`${styles.chip} ${activeFilter === 'ALL' ? styles.chipActive : ''}`} onClick={() => setFilter('ALL')}>
           All <span>{customers.length}</span>
         </button>
@@ -137,11 +147,24 @@ export default function ReceivablesTable({ customers }: Props) {
         </button>
       </div>
 
+      <div className={styles.filterBar}>
+        <span className={styles.filterLabel}>City</span>
+        <button className={`${styles.chip} ${activeCity === 'ALL' ? styles.chipActive : ''}`} onClick={() => setCityFilter('ALL')}>
+          All cities
+        </button>
+        {cities.map(city => (
+          <button key={city} className={`${styles.chip} ${activeCity === city ? styles.chipActive : ''}`} onClick={() => setCityFilter(city)}>
+            {city} <span>{customers.filter(c => cityOf(c) === city).length}</span>
+          </button>
+        ))}
+      </div>
+
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
               <th>Customer</th>
+              <th>City</th>
               <th>Unpaid Invoices</th>
               <th className={styles.right}>Amount Owed</th>
               <th>Assigned To</th>
@@ -153,6 +176,7 @@ export default function ReceivablesTable({ customers }: Props) {
                 <td className={styles.nameCell}>
                   <div className={styles.customerName}>{c.name}</div>
                 </td>
+                <td><span className={styles.cityTag}>{cityOf(c)}</span></td>
                 <td>
                   <span className={styles.countBadge}>{c.invoiceCount}</span>
                 </td>
@@ -178,7 +202,7 @@ export default function ReceivablesTable({ customers }: Props) {
           </tbody>
           <tfoot>
             <tr className={styles.totalRow}>
-              <td colSpan={2} className={styles.totalLabel}>
+              <td colSpan={3} className={styles.totalLabel}>
                 Total Outstanding
               </td>
               <td className={styles.right}>
