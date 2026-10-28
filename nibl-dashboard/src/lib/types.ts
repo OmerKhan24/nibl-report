@@ -104,6 +104,7 @@ export interface RepeatCustomers {
 
 export interface SalesApiResponse {
   repeatCustomers: RepeatCustomers;
+  repeatCustomersB2b: RepeatCustomers;
   b2c: ChannelStats;
   b2b: ChannelStats;
   total: {

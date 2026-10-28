@@ -324,7 +324,7 @@ export default function DashboardPage() {
                 </div>
                 <div className={styles.chartsRow}>
                   <div className={styles.chartMain}>
-                    <RepeatCustomers data={sales.repeatCustomers} />
+                    <RepeatCustomers data={sales.repeatCustomers} b2b={sales.repeatCustomersB2b} />
                   </div>
                   <div className={styles.chartSide}>
                     <MixDonut sales={sales} invoices={invoices} />

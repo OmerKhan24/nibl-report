@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
 import { fetchShopifyOrders } from '@/lib/shopify';
-import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, RepeatPerson, CityRevenue, DeliveryBreakdown } from '@/lib/types';
+import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, RepeatCustomers, RepeatPerson, CityRevenue, DeliveryBreakdown } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -328,63 +328,95 @@ export async function GET(req: NextRequest) {
       }
     };
 
-    // ── Repeat customers (Shopify) ──────────────────────────────
+    // ── Repeat customers ────────────────────────────────────────
     // A customer counts as "repeat within N days" when they placed an order in the
     // selected range and had a previous order at most N days before it.
     // Look back 60 days before the range start so early-range orders are judged fairly.
-    let lookbackOrders: any[] = [];
+    const DAY = 86_400_000;
+    const rangeStart = from ? new Date(`${from}T00:00:00+05:00`).getTime() : 0;
+    let lbFromStr = '', lbToStr = '';
     if (from) {
       const lbFrom = new Date(`${from}T00:00:00Z`);
       lbFrom.setUTCDate(lbFrom.getUTCDate() - 60);
       const lbTo = new Date(`${from}T00:00:00Z`);
       lbTo.setUTCDate(lbTo.getUTCDate() - 1);
-      lookbackOrders = await fetchShopifyOrders(lbFrom.toISOString().slice(0, 10), lbTo.toISOString().slice(0, 10));
+      lbFromStr = lbFrom.toISOString().slice(0, 10);
+      lbToStr = lbTo.toISOString().slice(0, 10);
     }
-    const repeatPool = [...lookbackOrders, ...shopifyOrdersRaw].filter((so: any) => {
-      if (so.test || !so.customer?.id) return false;
-      return !(so.cancelled_at && (so.financial_status === 'pending' || so.financial_status === 'voided'));
-    });
-    const customerOrders = new Map<number, number[]>();
-    const customerNames = new Map<number, string>();
-    for (const so of repeatPool) {
-      const nm = `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim();
-      customerNames.set(so.customer.id, nm || so.customer.email || `Customer #${so.customer.id}`);
-      const t = new Date(so.created_at).getTime();
-      const list = customerOrders.get(so.customer.id) ?? [];
-      list.push(t);
-      customerOrders.set(so.customer.id, list);
-    }
-    const rangeStart = from ? new Date(`${from}T00:00:00+05:00`).getTime() : 0;
-    const DAY = 86_400_000;
-    let rcCustomers = 0, rc30 = 0, rc60 = 0;
-    const names30: RepeatPerson[] = [], names60: RepeatPerson[] = [];
-    for (const [cid, times] of customerOrders.entries()) {
-      times.sort((a, b) => a - b);
-      const inRange = times.filter(t => t >= rangeStart);
-      if (!inRange.length) continue;
-      rcCustomers++;
-      let is30 = false, is60 = false, minGap = Infinity;
-      for (let i = 0; i < times.length; i++) {
-        if (times[i] < rangeStart || i === 0) continue;
-        const gap = (times[i] - times[i - 1]) / DAY;
-        if (gap < minGap) minGap = gap;
-        if (gap <= 30) is30 = true;
-        if (gap <= 60) is60 = true;
+
+    function buildRepeat(events: { id: number | string; name: string; t: number }[]): RepeatCustomers {
+      const byCustomer = new Map<string, { name: string; times: number[] }>();
+      for (const e of events) {
+        const key = String(e.id);
+        const entry = byCustomer.get(key) ?? { name: e.name, times: [] };
+        entry.times.push(e.t);
+        byCustomer.set(key, entry);
       }
-      const person = { name: customerNames.get(cid) || 'Unknown', orders: inRange.length, gapDays: Math.round(minGap) };
-      if (is30) { rc30++; names30.push(person); }
-      if (is60) { rc60++; names60.push(person); }
+      let customers = 0, c30 = 0, c60 = 0;
+      const p30: RepeatPerson[] = [], p60: RepeatPerson[] = [];
+      for (const { name, times } of byCustomer.values()) {
+        times.sort((x, y) => x - y);
+        const inRange = times.filter(t => t >= rangeStart);
+        if (!inRange.length) continue;
+        customers++;
+        let is30 = false, is60 = false, minGap = Infinity;
+        for (let i = 1; i < times.length; i++) {
+          if (times[i] < rangeStart) continue;
+          const gap = (times[i] - times[i - 1]) / DAY;
+          if (gap < 1) continue; // same-day orders are split orders, not a return visit
+          if (gap < minGap) minGap = gap;
+          if (gap <= 30) is30 = true;
+          if (gap <= 60) is60 = true;
+        }
+        if (!is60) continue;
+        const person = { name, orders: inRange.length, gapDays: Math.round(minGap) };
+        if (is30) { c30++; p30.push(person); }
+        if (is60) { c60++; p60.push(person); }
+      }
+      const rank = (a: RepeatPerson, b: RepeatPerson) => b.orders - a.orders || a.name.localeCompare(b.name);
+      p30.sort(rank); p60.sort(rank);
+      return {
+        customers,
+        d30: { count: c30, rate: customers ? (c30 / customers) * 100 : 0, people: p30 },
+        d60: { count: c60, rate: customers ? (c60 / customers) * 100 : 0, people: p60 },
+      };
     }
-    names30.sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name));
-    names60.sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name));
-    const repeatCustomers = {
-      customers: rcCustomers,
-      d30: { count: rc30, rate: rcCustomers ? (rc30 / rcCustomers) * 100 : 0, people: names30 },
-      d60: { count: rc60, rate: rcCustomers ? (rc60 / rcCustomers) * 100 : 0, people: names60 },
-    };
+
+    // Shopify (D2C)
+    const lookbackShopify = from ? await fetchShopifyOrders(lbFromStr, lbToStr) : [];
+    const shopifyEvents = [...lookbackShopify, ...shopifyOrdersRaw]
+      .filter((so: any) => {
+        if (so.test || !so.customer?.id) return false;
+        return !(so.cancelled_at && (so.financial_status === 'pending' || so.financial_status === 'voided'));
+      })
+      .map((so: any) => ({
+        id: so.customer.id,
+        name: `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim() || so.customer.email || `Customer #${so.customer.id}`,
+        t: new Date(so.created_at).getTime(),
+      }));
+    const repeatCustomers = buildRepeat(shopifyEvents);
+
+    // B2B (Odoo direct sales, confirmed orders, grouped by partner)
+    const lookbackB2b = from
+      ? await odooQuery<SaleOrder[]>('sale.order', 'search_read', [[
+          ['company_id', '=', 1],
+          ['state', 'in', ['sale', 'done']],
+          ['date_order', '>=', `${lbFromStr} 00:00:00`],
+          ['date_order', '<=', `${lbToStr} 23:59:59`],
+        ]], { fields: ['name', 'partner_id', 'client_order_ref', 'date_order'], limit: 5000 })
+      : [];
+    const b2bEvents = [...lookbackB2b.filter(o => !isB2C(o)), ...b2bConfirmed]
+      .filter(o => o.partner_id && o.date_order)
+      .map(o => ({
+        id: o.partner_id[0],
+        name: o.partner_id[1],
+        t: new Date(o.date_order.replace(' ', 'T') + 'Z').getTime(),
+      }));
+    const repeatCustomersB2b = buildRepeat(b2bEvents);
 
     const response: SalesApiResponse = {
       repeatCustomers,
+      repeatCustomersB2b,
       b2c: {
         orders: allB2cOrders.length,
         revenue: b2cRevenue,
