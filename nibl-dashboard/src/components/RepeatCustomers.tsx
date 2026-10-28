@@ -43,9 +43,9 @@ export default function RepeatCustomers({ data, b2b }: { data: RepeatData; b2b: 
   return (
     <div className={styles.grid}>
       <RepeatCard title="Repeat Customers · 30 Days" tag="Shopify" window={data.d30} total={data.customers} color="#0ea5e9" />
-      <RepeatCard title="Repeat Customers · 60 Days" tag="Shopify" window={data.d60} total={data.customers} color="#0284c7" />
+      <RepeatCard title="Repeat Customers · 31–60 Days" tag="Shopify" window={data.d60} total={data.customers} color="#0284c7" />
       <RepeatCard title="Repeat Customers · 30 Days" tag="B2B" window={b2b.d30} total={b2b.customers} color="#7c3aed" />
-      <RepeatCard title="Repeat Customers · 60 Days" tag="B2B" window={b2b.d60} total={b2b.customers} color="#6d28d9" />
+      <RepeatCard title="Repeat Customers · 31–60 Days" tag="B2B" window={b2b.d60} total={b2b.customers} color="#6d28d9" />
     </div>
   );
 }

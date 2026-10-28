@@ -359,19 +359,21 @@ export async function GET(req: NextRequest) {
         const inRange = times.filter(t => t >= rangeStart);
         if (!inRange.length) continue;
         customers++;
-        let is30 = false, is60 = false, minGap = Infinity;
+        // Buckets are exclusive: a customer who came back within 30 days is only in the
+        // 30-day list; the 60-day list is those whose quickest return was 31-60 days.
+        let gap30 = Infinity, gap60 = Infinity;
         for (let i = 1; i < times.length; i++) {
           if (times[i] < rangeStart) continue;
           const gap = (times[i] - times[i - 1]) / DAY;
           if (gap < 1) continue; // same-day orders are split orders, not a return visit
-          if (gap < minGap) minGap = gap;
-          if (gap <= 30) is30 = true;
-          if (gap <= 60) is60 = true;
+          if (gap <= 30) gap30 = Math.min(gap30, gap);
+          else if (gap <= 60) gap60 = Math.min(gap60, gap);
         }
-        if (!is60) continue;
-        const person = { name, orders: inRange.length, gapDays: Math.round(minGap) };
-        if (is30) { c30++; p30.push(person); }
-        if (is60) { c60++; p60.push(person); }
+        if (gap30 !== Infinity) {
+          c30++; p30.push({ name, orders: inRange.length, gapDays: Math.round(gap30) });
+        } else if (gap60 !== Infinity) {
+          c60++; p60.push({ name, orders: inRange.length, gapDays: Math.round(gap60) });
+        }
       }
       const rank = (a: RepeatPerson, b: RepeatPerson) => b.orders - a.orders || a.name.localeCompare(b.name);
       p30.sort(rank); p60.sort(rank);
