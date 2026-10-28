@@ -141,8 +141,7 @@ export async function GET(req: NextRequest) {
 
     const outstandingCustomers = Array.from(outMap.values())
       .filter(c => c.amountOutstanding > 0)
-      .sort((a, b) => b.amountOutstanding - a.amountOutstanding)
-      .slice(0, 50); // top 50 outstanding
+      .sort((a, b) => b.amountOutstanding - a.amountOutstanding); // all outstanding customers
 
     const response: InvoicesApiResponse = {
       total,
