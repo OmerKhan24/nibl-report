@@ -86,6 +86,7 @@ export interface ChannelTargetsData {
 
 export interface RepeatPerson {
   name: string;
+  city: string;
   orders: number;   // orders placed in the selected range
   gapDays: number;  // shortest gap between two consecutive orders
 }
@@ -98,6 +99,7 @@ export interface RepeatWindow {
 
 export interface RepeatCustomers {
   customers: number;
+  byCity: Record<string, number>; // customers who ordered in range, per city
   d30: RepeatWindow;
   d60: RepeatWindow;
 }

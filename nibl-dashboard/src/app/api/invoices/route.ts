@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
+import { resolveCity } from '@/lib/city';
 import type { Invoice, InvoicesApiResponse } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -140,13 +141,6 @@ export async function GET(req: NextRequest) {
     });
 
     // City lookup: Odoo partner city first, then hints in the name, else "Other"
-    const normCity = (txt: string): string | null => {
-      const t = txt.toLowerCase();
-      if (/karachi|\bkhi\b/.test(t)) return 'Karachi';
-      if (/islamabad|rawalpindi|\bisb\b|\brwp\b/.test(t)) return 'Islamabad';
-      if (/lahore|\blhe\b/.test(t)) return 'Lahore';
-      return null;
-    };
     const partnerIds = Array.from(outMap.keys());
     const cityById = new Map<number, string>();
     if (partnerIds.length) {
@@ -157,7 +151,7 @@ export async function GET(req: NextRequest) {
     }
     outMap.forEach(c => {
       const raw = cityById.get(c.id) || '';
-      c.city = normCity(raw) || normCity(c.name) || (raw ? raw.replace(/\b\w/g, ch => ch.toUpperCase()) : 'Other');
+      c.city = resolveCity(raw, c.name);
     });
 
     const outstandingCustomers = Array.from(outMap.values())

@@ -108,3 +108,42 @@
 }
 .pname { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pmeta { font-size: 10.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+
+.wrap { display: flex; flex-direction: column; gap: 12px; }
+.filterBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filterLabel {
+  min-width: 36px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.chip {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: var(--b2b); color: var(--b2b); }
+.chipActive, .chipActive:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+.pcity {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}

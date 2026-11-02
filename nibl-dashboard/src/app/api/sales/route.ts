@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { odooQuery } from '@/lib/odoo';
+import { resolveCity } from '@/lib/city';
 import { fetchShopifyOrders } from '@/lib/shopify';
 import type { SaleOrder, SalesApiResponse, MonthlyData, PartnerRevenue, RepeatCustomers, RepeatPerson, CityRevenue, DeliveryBreakdown } from '@/lib/types';
 
@@ -344,21 +345,24 @@ export async function GET(req: NextRequest) {
       lbToStr = lbTo.toISOString().slice(0, 10);
     }
 
-    function buildRepeat(events: { id: number | string; name: string; t: number }[]): RepeatCustomers {
-      const byCustomer = new Map<string, { name: string; times: number[] }>();
+    function buildRepeat(events: { id: number | string; name: string; city: string; t: number }[]): RepeatCustomers {
+      const byCustomer = new Map<string, { name: string; city: string; times: number[] }>();
       for (const e of events) {
         const key = String(e.id);
-        const entry = byCustomer.get(key) ?? { name: e.name, times: [] };
+        const entry = byCustomer.get(key) ?? { name: e.name, city: e.city, times: [] };
+        if (entry.city === 'Other' && e.city !== 'Other') entry.city = e.city;
         entry.times.push(e.t);
         byCustomer.set(key, entry);
       }
       let customers = 0, c30 = 0, c60 = 0;
       const p30: RepeatPerson[] = [], p60: RepeatPerson[] = [];
-      for (const { name, times } of byCustomer.values()) {
+      const byCity: Record<string, number> = {};
+      for (const { name, city, times } of byCustomer.values()) {
         times.sort((x, y) => x - y);
         const inRange = times.filter(t => t >= rangeStart);
         if (!inRange.length) continue;
         customers++;
+        byCity[city] = (byCity[city] || 0) + 1;
         // Buckets are exclusive: a customer who came back within 30 days is only in the
         // 30-day list; the 60-day list is those whose quickest return was 31-60 days.
         let gap30 = Infinity, gap60 = Infinity;
@@ -370,15 +374,16 @@ export async function GET(req: NextRequest) {
           else if (gap <= 60) gap60 = Math.min(gap60, gap);
         }
         if (gap30 !== Infinity) {
-          c30++; p30.push({ name, orders: inRange.length, gapDays: Math.round(gap30) });
+          c30++; p30.push({ name, city, orders: inRange.length, gapDays: Math.round(gap30) });
         } else if (gap60 !== Infinity) {
-          c60++; p60.push({ name, orders: inRange.length, gapDays: Math.round(gap60) });
+          c60++; p60.push({ name, city, orders: inRange.length, gapDays: Math.round(gap60) });
         }
       }
       const rank = (a: RepeatPerson, b: RepeatPerson) => b.orders - a.orders || a.name.localeCompare(b.name);
       p30.sort(rank); p60.sort(rank);
       return {
         customers,
+        byCity,
         d30: { count: c30, rate: customers ? (c30 / customers) * 100 : 0, people: p30 },
         d60: { count: c60, rate: customers ? (c60 / customers) * 100 : 0, people: p60 },
       };
@@ -394,6 +399,7 @@ export async function GET(req: NextRequest) {
       .map((so: any) => ({
         id: so.customer.id,
         name: `${so.customer.first_name || ''} ${so.customer.last_name || ''}`.trim() || so.customer.email || `Customer #${so.customer.id}`,
+        city: resolveCity(so.shipping_address?.city || so.customer?.default_address?.city || so.billing_address?.city || '', ''),
         t: new Date(so.created_at).getTime(),
       }));
     const repeatCustomers = buildRepeat(shopifyEvents);
@@ -407,13 +413,21 @@ export async function GET(req: NextRequest) {
           ['date_order', '<=', `${lbToStr} 23:59:59`],
         ]], { fields: ['name', 'partner_id', 'client_order_ref', 'date_order'], limit: 5000 })
       : [];
-    const b2bEvents = [...lookbackB2b.filter(o => !isB2C(o)), ...b2bConfirmed]
-      .filter(o => o.partner_id && o.date_order)
-      .map(o => ({
-        id: o.partner_id[0],
-        name: o.partner_id[1],
-        t: new Date(o.date_order.replace(' ', 'T') + 'Z').getTime(),
-      }));
+    const b2bOrders = [...lookbackB2b.filter(o => !isB2C(o)), ...b2bConfirmed].filter(o => o.partner_id && o.date_order);
+    const b2bCityById = new Map<number, string>();
+    const b2bPids = [...new Set(b2bOrders.map(o => o.partner_id[0]))];
+    if (b2bPids.length) {
+      const ps = await odooQuery<{ id: number; city: string | false }[]>(
+        'res.partner', 'search_read', [[['id', 'in', b2bPids]]], { fields: ['id', 'city'], limit: 10000 }
+      );
+      for (const p of ps) if (p.city) b2bCityById.set(p.id, p.city);
+    }
+    const b2bEvents = b2bOrders.map(o => ({
+      id: o.partner_id[0],
+      name: o.partner_id[1],
+      city: resolveCity(b2bCityById.get(o.partner_id[0]) || '', o.partner_id[1]),
+      t: new Date(o.date_order.replace(' ', 'T') + 'Z').getTime(),
+    }));
     const repeatCustomersB2b = buildRepeat(b2bEvents);
 
     const response: SalesApiResponse = {
