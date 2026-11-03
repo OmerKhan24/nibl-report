@@ -12,9 +12,11 @@ interface CardProps {
   data: RepeatData;
   city: string;
   color: string;
+  filterable?: boolean;
 }
 
-function RepeatCard({ title, tag, window: w, data, city, color }: CardProps) {
+function RepeatCard({ title, tag, window: w, data, city: cityFilter, color, filterable }: CardProps) {
+  const city = filterable ? cityFilter : 'ALL';
   const people = city === 'ALL' ? w.people : w.people.filter(p => p.city === city);
   const total = city === 'ALL' ? data.customers : data.byCity[city] || 0;
   const rate = total ? (people.length / total) * 100 : 0;
@@ -38,7 +40,7 @@ function RepeatCard({ title, tag, window: w, data, city, color }: CardProps) {
             <li key={`${p.name}-${i}`} className={styles.person}>
               <span className={styles.avatar}>{p.name.charAt(0).toUpperCase()}</span>
               <span className={styles.pname}>{p.name}</span>
-              <span className={styles.pcity}>{p.city}</span>
+              {filterable && <span className={styles.pcity}>{p.city}</span>}
               <span className={styles.pmeta}>{p.orders} orders · {p.gapDays}d gap</span>
             </li>
           ))}
@@ -52,9 +54,7 @@ export default function RepeatCustomers({ data, b2b }: { data: RepeatData; b2b: 
   const [city, setCity] = useState('ALL');
 
   const counts: Record<string, number> = {};
-  for (const src of [data.byCity, b2b.byCity]) {
-    for (const [c, n] of Object.entries(src || {})) counts[c] = (counts[c] || 0) + n;
-  }
+  for (const [c, n] of Object.entries(b2b.byCity || {})) counts[c] = (counts[c] || 0) + n;
   const cities = Object.keys(counts).sort((a, b) =>
     a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b)
   );
@@ -62,8 +62,12 @@ export default function RepeatCustomers({ data, b2b }: { data: RepeatData; b2b: 
 
   return (
     <div className={styles.wrap}>
+      <div className={styles.grid}>
+        <RepeatCard title="Repeat Customers · 30 Days" tag="Shopify" window={data.d30} data={data} city={active} color="#0ea5e9" />
+        <RepeatCard title="Repeat Customers · 31–60 Days" tag="Shopify" window={data.d60} data={data} city={active} color="#0284c7" />
+      </div>
       <div className={styles.filterBar}>
-        <span className={styles.filterLabel}>City</span>
+        <span className={styles.filterLabel}>B2B City</span>
         <button className={`${styles.chip} ${active === 'ALL' ? styles.chipActive : ''}`} onClick={() => setCity('ALL')}>
           All cities
         </button>
@@ -74,10 +78,8 @@ export default function RepeatCustomers({ data, b2b }: { data: RepeatData; b2b: 
         ))}
       </div>
       <div className={styles.grid}>
-        <RepeatCard title="Repeat Customers · 30 Days" tag="Shopify" window={data.d30} data={data} city={active} color="#0ea5e9" />
-        <RepeatCard title="Repeat Customers · 31–60 Days" tag="Shopify" window={data.d60} data={data} city={active} color="#0284c7" />
-        <RepeatCard title="Repeat Customers · 30 Days" tag="B2B" window={b2b.d30} data={b2b} city={active} color="#7c3aed" />
-        <RepeatCard title="Repeat Customers · 31–60 Days" tag="B2B" window={b2b.d60} data={b2b} city={active} color="#6d28d9" />
+        <RepeatCard title="Repeat Customers · 30 Days" tag="B2B" window={b2b.d30} data={b2b} city={active} color="#7c3aed" filterable />
+        <RepeatCard title="Repeat Customers · 31–60 Days" tag="B2B" window={b2b.d60} data={b2b} city={active} color="#6d28d9" filterable />
       </div>
     </div>
   );
