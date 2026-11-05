@@ -10,6 +10,7 @@ interface Props {
 }
 
 const LS_KEY = 'nibl_receivable_assignments';
+const MIGRATED_KEY = 'nibl_receivable_assignments_uploaded_v2';
 
 export default function ReceivablesTable({ customers }: Props) {
   const [assigned, setAssigned] = useState<Record<string, string>>({});
@@ -26,16 +27,21 @@ export default function ReceivablesTable({ customers }: Props) {
     fetch('/api/assignments')
       .then(r => (r.ok ? r.json() : null))
       .then(remote => {
-        // Shared store is empty but this browser has assignments: upload them once so everyone sees them.
-        if (remote && !Object.keys(remote).length) {
+        // One-time per browser: upload local assignments the shared store doesn't have yet.
+        if (remote) {
           try {
-            const local = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-            if (Object.keys(local).length) {
-              fetch('/api/assignments', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ map: local }),
-              }).catch(() => {});
+            if (!localStorage.getItem(MIGRATED_KEY)) {
+              const local = JSON.parse(localStorage.getItem(LS_KEY) || '{}') as Record<string, string>;
+              const missing = Object.fromEntries(Object.entries(local).filter(([id]) => !(id in remote)));
+              if (Object.keys(missing).length) {
+                fetch('/api/assignments', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ map: missing }),
+                }).then(r => { if (r.ok) localStorage.setItem(MIGRATED_KEY, '1'); }).catch(() => {});
+              } else {
+                localStorage.setItem(MIGRATED_KEY, '1');
+              }
             }
           } catch { /* ignore */ }
         }
