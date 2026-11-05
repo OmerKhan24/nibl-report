@@ -1,22 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { storageGet, storageSet } from '@/lib/storage';
+import { hashGetAll, hashSet, hashDel, storageMode } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
-const KEY = 'nibl:receivable-assignments';
-type Assignments = Record<string, string>; // partner id -> assigned person
+const KEY = 'nibl:receivable-assignments:v2';
+// partner id -> assigned person, one hash field per customer
 
-export async function GET() {
-  const map = (await storageGet<Assignments>(KEY)) ?? {};
-  return NextResponse.json(map, { headers: { 'Cache-Control': 'no-store' } });
+async function reply(map: Record<string, string>) {
+  return NextResponse.json(map, { headers: { 'Cache-Control': 'no-store', 'x-storage': await storageMode() } });
 }
 
+export async function GET() {
+  return reply(await hashGetAll(KEY));
+}
+
+// Single: { id, name }   Bulk (one-time import from a browser): { map: { id: name } }
 export async function PUT(req: NextRequest) {
-  const { id, name } = await req.json() as { id: number | string; name: string };
-  const map = (await storageGet<Assignments>(KEY)) ?? {};
-  const clean = (name || '').trim().slice(0, 80);
-  if (clean) map[String(id)] = clean;
-  else delete map[String(id)];
-  await storageSet(KEY, map);
-  return NextResponse.json(map);
+  const body = await req.json() as { id?: number | string; name?: string; map?: Record<string, string> };
+  if (body.map) {
+    const fields: Record<string, string> = {};
+    for (const [id, name] of Object.entries(body.map)) {
+      const clean = String(name || '').trim().slice(0, 80);
+      if (clean) fields[String(id)] = clean;
+    }
+    await hashSet(KEY, fields);
+  } else if (body.id !== undefined) {
+    const clean = (body.name || '').trim().slice(0, 80);
+    if (clean) await hashSet(KEY, { [String(body.id)]: clean });
+    else await hashDel(KEY, String(body.id));
+  }
+  return reply(await hashGetAll(KEY));
 }

@@ -26,6 +26,19 @@ export default function ReceivablesTable({ customers }: Props) {
     fetch('/api/assignments')
       .then(r => (r.ok ? r.json() : null))
       .then(remote => {
+        // Shared store is empty but this browser has assignments: upload them once so everyone sees them.
+        if (remote && !Object.keys(remote).length) {
+          try {
+            const local = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+            if (Object.keys(local).length) {
+              fetch('/api/assignments', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ map: local }),
+              }).catch(() => {});
+            }
+          } catch { /* ignore */ }
+        }
         if (remote && Object.keys(remote).length) {
           setAssigned(prev => {
             const merged = { ...prev, ...remote };
